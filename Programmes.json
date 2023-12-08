@@ -1,0 +1,36 @@
+[
+    {
+    "Name": "My Workout No1",
+    "Segments": [
+        {
+        "Type": "Power",
+        "Duration": 30,
+        "Setting": 120,
+        "Reps": 1
+        },
+        {
+        "Type": "Level",
+        "Duration": 20,
+        "Setting": 7,
+        "Reps": 1
+        }
+    ]
+    },
+    {
+    "Name": "My Workout No2",
+    "Segments": [
+        {
+        "Type": "Power",
+        "Duration": 5,
+        "Setting": 130,
+        "Reps": 3
+        },
+        {
+        "Type": "Power",
+        "Duration": 255,
+        "Setting": 200,
+        "Reps": 2
+        }
+    ]
+    }
+]
