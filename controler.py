@@ -1,8 +1,10 @@
 import asyncio
 import time
+import datetime
 import contextlib
 import configparser
 import queue
+import csv
 from   bleak              import BleakClient, BleakScanner
 from   heart_rate_service import parse_hr_measurement
 from   workout_loader     import Workouts
@@ -10,18 +12,24 @@ from   BLE_Device         import BLE_Device, QueueEntry
 
 
 class Dataset:
-     def __init__(self):
+    def __init__(self):
         self.cadence: float = 0
         self.power: float = 0
         self.heartRate: int = 0
         self.gradient: int = 0
+    
+    def getIterableRecord(self):
+        return list((self.cadence,
+                     self.power,
+                     self.heartRate,
+                     self.gradient))
 
 class CurrentData:
     def __init__(self):
         self.workoutTime: int = 0
-        self.momentary: Dataset
-        self.average: Dataset
-        self.max: Dataset
+        self.momentary: Dataset = Dataset()
+        self.average: Dataset = Dataset()
+        self.max: Dataset = Dataset()
         self.NoAverage:int = 0
 
     def updateAverages(self):
@@ -31,6 +39,27 @@ class CurrentData:
         self.average.heartRate = (self.momentary.heartRate +(self.NoAverage * self.average.heartRate) / newNoAverage)
         self.average.gradient = (self.momentary.gradient +(self.NoAverage * self.average.gradient) / newNoAverage)
         self.NoAverage += 1
+
+    def getIterableRecord(self):
+        
+        ret = [self.workoutTime]
+        for val in self.momentary.getIterableRecord():
+            ret.append(val)
+        return ret
+    
+    def getIterableAverages(self):
+        ret:list = list(("AVERAGE:"))
+
+        for val in self.average.getIterableRecord():
+            ret.append(val)
+        return ret
+
+    def getIterableMaximums(self):
+        ret:list = list(("MAX:"))
+
+        for val in self.max.getIterableRecord():
+            ret.append(val)
+        return ret
                                 
 
 currentData = CurrentData()
@@ -38,19 +67,33 @@ currentData = CurrentData()
 
 
 class HeartRateMonitor(BLE_Device):
-    heart_rate_measurement_characteristic_id: str = '00002a37-0000-1000-8000-00805f9b34fb'
+    UUID_HR_measurement: str = '00002a37-0000-1000-8000-00805f9b34fb'
     
     def subscribeToService(self):
-        return super().subscribeToService(self.heart_rate_measurement_characteristic_id)
+        return super().subscribeToService(self.UUID_HR_measurement)
     
     def unsubscribeFromService(self):
-        return super().unsubscribeFromService(self.heart_rate_measurement_characteristic_id)
+        return super().unsubscribeFromService(self.UUID_HR_measurement)
     
     def Callback(sender, data):
         if sender.description == "Heart Rate Measurement":  # sanity check if the correct sensor 
             currentReading = parse_hr_measurement(data)
             currentData.momentary.heartRate = currentReading.bpm
             print(sender.description, " bpm: ", currentReading.bpm)
+
+
+class FitnessMachine(BLE_Device):
+   
+    UUID_supported_resistance_level_range = "00002ad6-0000-1000-8000-00805f9b34fb" # (read):   Supported Resistance Level Range
+    UUID_supported_power_range            = "00002ad8-0000-1000-8000-00805f9b34fb" # (read):   Supported Power Range
+    UUID_features                         = "00002acc-0000-1000-8000-00805f9b34fb" # (read):   Fitness Machine Feature
+    UUID_indoor_bike_data                 = "00002ad2-0000-1000-8000-00805f9b34fb" # (notify:  Indoor Bike Data
+    UUID_status                           = "00002ad3-0000-1000-8000-00805f9b34fb" # (notify): Fitness Machine Status
+    UUID_training_status                  = "00002ad3-0000-1000-8000-00805f9b34fb" # (notify): Training Status
+    UUID_control_point                    = "00002ad9-0000-1000-8000-00805f9b34fb" # (write, indicate): Fitness Machine Control Point
+
+
+
 
 
 
@@ -104,12 +147,12 @@ class WorkoutManager():
     def __init__(self) -> None:
         self.state:str = "IDLE"
         self.currentWorkout: dict = None
-        self.timer: int = None
+        self.workoutTimer: int = 0
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
         self.currentSegmentStartTime: float= 0
         self.currentSegment:dict  = None
-        self.elapsedTime: float = 0
+        self.currentSegmentElapsedTime: float = 0
     
     async def run(self,):
         print("starting workout manager")
@@ -126,21 +169,50 @@ class WorkoutManager():
             if self.state == "IDLE": 
                 if not entry == None: 
                     if entry.type == "Start":   # Starting a new workout
+                     
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
-                        self.state = "Running"
+                        self.state = "RUNNING"
+                    
+                    elif entry.type == "Freeride":
+                        self.state = "FREERIDE"
+                    
+                    try:
+                        workout_logfile = open(datetime.datetime.now().strftime("Workouts/Workout-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
+                        csvWriter = csv.writer(workout_logfile, dialect='excel')
+                        csvWriter.writerow(list(("Workout log file","")))
+                        csvWriter.writerow(list(("Created:",
+                                                datetime.datetime.now().strftime("%d %b %Y"),
+                                                "at:",
+                                                datetime.datetime.now().strftime("%X")                                                
+                                                )))
+                        csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "Gradient")))
+                        
+                    except:
+                        raise Exception("Failed creating a workout data file!")
                 else:
                     await asyncio.sleep(0.1)
             
 
             if self.state == "PAUSED":
-                await asyncio.sleep(0.1)
-            
+                if not entry == None: 
+                    if entry.type == "Start":   # Resume
+                        self.state = "RUNNING"
+                else:
+                    await asyncio.sleep(0.1)
+
 
             if self.state == "RUNNING":
                 
+                if not entry == None: 
+                    if entry.type == "Stop":   # Stop the workout, go to STOP to close the datafile
+                        self.state = "STOP"
+                    
+                    elif entry.type == "Pause": # Pause the workout, go to PAUSE and await futher instructions
+                        self.state = "PAUSED"
+                
                 isSegmentTransition: bool = True
                 try:
-                    if self.elapsedTime < self.currentSegment["Duration"]:
+                    if self.currentSegmentElapsedTime < self.currentSegment["Duration"]:
                         isSegmentTransition = False
                 except:
                     pass
@@ -156,16 +228,33 @@ class WorkoutManager():
                     else:
                         
                         print("end of workout")
-                        self.state = "Stop"
+                        self.state = "STOP"
                 
                 await asyncio.sleep(0.1)
-                self.elapsedTime = time.monotonic() - self.currentSegmentStartTime
-            
+                oldElapsedTime = self.currentSegmentElapsedTime
+                self.currentSegmentElapsedTime = time.monotonic() - self.currentSegmentStartTime
 
+                if self.currentSegmentElapsedTime - oldElapsedTime > 1.0:   # 
+                    
+                    self.workoutTimer += self.currentSegmentElapsedTime - oldElapsedTime
+                    csvWriter.writerow(currentData.getIterableRecord())
+        
+            if self.state == "STOP":
+                #### Closing the logfile ####
+                try:
+                    csvWriter.writerow(currentData.getIterableAverages())
+                    csvWriter.writerow(currentData.getIterableMaximums())
+                    workout_logfile.close()
+                except:
+                    raise Exception("Failed to close the workout data file!")
 
-            if self.state == "Stop":
-                #### TO DO: save workout, reset variables etc then go to IDLE
-                await asyncio.sleep(0.1)
+                ##### reset variables and the state machine #####
+                self.state = "IDLE"
+                self.currentWorkout = None
+                self.workoutTimer = 0
+                self.currentSegmentStartTime = 0
+                self.currentSegment = None
+                self.currentSegmentElapsedTime = 0
 
 
 workoutManager = WorkoutManager()
@@ -219,7 +308,7 @@ async def connection_to_BLE_Device(lock: asyncio.Lock, dev):
 
                     dev.connectionState = True
                      
-                    while dev.connect:  ####    Internal loop running while connected - Sending commands happen here
+                    while dev.connect:  ####    Internal state machine running while connected - Sending commands happen here
                         await asyncio.sleep(0.1)
 
                         if not dev.queue.empty():
@@ -235,6 +324,8 @@ async def connection_to_BLE_Device(lock: asyncio.Lock, dev):
                                     
                                 elif entry.type == 'Send':
                                     print('Send')
+                                    await client.write_gatt_char(entry.data["UUID"], entry.data["message"] , True)
+                                
                             except:
                                 pass
 
