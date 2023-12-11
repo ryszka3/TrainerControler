@@ -69,6 +69,7 @@ class FitnessMachine(BLE_Device):
         #self.logfile = open(datetime.datetime.now().strftime("Logfile-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
         #self.csvWriter = csv.writer(self.logfile, dialect='excel') # only for debugging
         self.dataContainer = container
+        self.remoteControlAcquired: bool = False
 
     def requestSupportedPower(self):
         super().readFromService(self.UUID_supported_power_range)
@@ -91,17 +92,21 @@ class FitnessMachine(BLE_Device):
     def responce(self):
         super().writeToService(self.UUID_control_point, b"\x80")
 
-    def setTargetPower(self, power: int) -> None:
-        super().writeToService(self.UUID_control_point, b"\x05" + power.to_bytes(2, "little", signed=True))
 
-    def setTargetResistance(self, resistance: int) -> None:
-        super().writeToService(self.UUID_control_point, b"\x04" + resistance.to_bytes(1, "little", signed=False))
+    def setTarget(self, type: str, setting: int) -> None:
+        
+        if   type == "Power":
+            super().writeToService(self.UUID_control_point, b"\x05" + setting.to_bytes(2, "little", signed=True))
+        
+        elif type == "Level":
+            super().writeToService(self.UUID_control_point, b"\x04" + setting.to_bytes(1, "little", signed=False))
+        
+        elif type == "Speed":
+           super().writeToService(self.UUID_control_point, b"\x02" + setting.to_bytes(2, "little", signed=False))
+        
+        elif type == "Incline":
+            super().writeToService(self.UUID_control_point, b"\x03" + setting.to_bytes(2, "little", signed=True))
 
-    def setSpeed(self, speed: int):
-        super().writeToService(self.UUID_control_point, b"\x02" + speed.to_bytes(2, "little", signed=False))
-
-    def setIncline(self, incline):
-        super().writeToService(self.UUID_control_point, b"\x03" + incline.to_bytes(2, "little", signed=True))
 
     def stop(self, parameter):
         super().writeToService(self.UUID_control_point, b"\x07" + parameter.to_bytes(1, "little", signed=False))
@@ -140,24 +145,6 @@ class FitnessMachine(BLE_Device):
             #wr = ("Power", message)
             #self.csvWriter.writerow(wr)
 
-
-    def subscribeToTrainingStatus(self):
-        super().subscribeToService(self.UUID_training_status)
-
-    def subscribeToMachineStatus(self):
-        super().subscribeToService(self.UUID_status)
-
-    def subscribeToControlPoint(self):
-        super().subscribeToService(self.UUID_control_point)
-
-    def subscribeToIndoorBikeData(self):
-        super().subscribeToService(self.UUID_indoor_bike_data)
-
-    def subscribeToSpeedCadenceData(self):
-        super().subscribeToService(self.UUID_speedCadenceSensorData)
-
-    def subscribeToPowerData(self):
-        super().subscribeToService(self.UUID_powerSensorData)
 
 
 async def connection_to_BLE_Device(lock: asyncio.Lock, dev: BLE_Device, container: DataContainer):

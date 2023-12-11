@@ -1,6 +1,7 @@
 import asyncio
 import configparser
-from   workout_loader     import WorkoutManager
+import queue
+from   workouts    import WorkoutManager
 from   BLE_Device         import HeartRateMonitor, FitnessMachine, connection_to_BLE_Device
 from   datatypes          import DataContainer
 
@@ -38,28 +39,33 @@ if 'TurboTrainer' in config:
 
 #####    Main Programme functions here    ####
 
-async def supervisor():
+class Supervisor:
+    def __init__(self) -> None:
+        self.queue = queue.SimpleQueue()
+
+    async def loop():
+        
+        await asyncio.sleep(15.0)
+        print("end Wait1")
+
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_speedCadenceSensorData)
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_control_point)
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_powerSensorData)
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_training_status)
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_status)
+
+        await asyncio.sleep(5.0)
+
+        device_turboTrainer.requestFeatures()
+        device_turboTrainer.requestSupportedPower()
+        device_turboTrainer.requestSupportedResistance()
+
+        await asyncio.sleep(5.0)
+        dataAndFlagContainer.programmeRunningFlag = False
+        print("Supervisor Closed")
     
-    await asyncio.sleep(15.0)
-    print("end Wait1")
-
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_speedCadenceSensorData)
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_control_point)
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_powerSensorData)
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_training_status)
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-    device_turboTrainer.subscribeToService(device_turboTrainer.UUID_status)
-
-    await asyncio.sleep(5.0)
-
-    device_turboTrainer.requestFeatures()
-    device_turboTrainer.requestSupportedPower()
-    device_turboTrainer.requestSupportedResistance()
-
-    await asyncio.sleep(5.0)
-    dataAndFlagContainer.programmeRunningFlag = False
-    print("Supervisor Closed")
-    
+supervisor = Supervisor()
 
 async def main():
    
@@ -68,8 +74,8 @@ async def main():
     await asyncio.gather(
         connection_to_BLE_Device(lock, device_heartRateSensor, dataAndFlagContainer),
         connection_to_BLE_Device(lock, device_turboTrainer,    dataAndFlagContainer),
-        supervisor(),
-        workoutManager.run()
+        supervisor.loop(),
+        workoutManager.run(device_turboTrainer)
     )
 
 

@@ -1,3 +1,4 @@
+import copy
 
 class MinMaxIncrement:
     def __init__(self) -> None:
@@ -5,10 +6,36 @@ class MinMaxIncrement:
         self.max = 0
         self.increment = 0
 
+class WorkoutProgram:
+    def __init__(self, name: str, segs: list) -> None:
+        self.name: str = name
+        self.segments:list = segs
+
+    def copy(self):
+        return copy.deepcopy(self)
+
+
+class WorkoutSegment:
+    def __init__(self, segType: str, dur: int, set: int, rep: int) -> None:
+        self.segmentType: str = segType
+        self.duration: int = dur
+        self.setting: int = set
+        self.reps: int = rep
+        self.startTime = 0
+        self.elapsedTime = 0
+
+
+class WorkoutParameters:
+     def __init__(self, name, totalDuration, avgPower, avgLevel, noSegments) -> None:
+        self.name = name
+        self.totalDuration = totalDuration
+        self.avgPower = avgPower, 
+        self.avgLevel = avgLevel,
+        self.noSegments = noSegments
 
 class QueueEntry:
-    def __init__(self, dtype: str, data):
-        self.type: str = dtype
+    def __init__(self, messageType: str, data):
+        self.type: str = messageType
         self.data = data
 
 class Dataset:
