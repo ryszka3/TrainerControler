@@ -80,15 +80,15 @@ class DataContainer:
         return ret
     
     def getIterableAverages(self):
-        ret:list = list(("AVERAGE:"))
-
+        ret:list = list()
+        ret.append("AVERAGE:")
         for val in self.average.getIterableRecord():
             ret.append(val)
         return ret
 
     def getIterableMaximums(self):
-        ret:list = list(("MAX:"))
-
+        ret:list = list()
+        ret.append("MAX:")
         for val in self.max.getIterableRecord():
             ret.append(val)
         return ret

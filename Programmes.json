@@ -4,14 +4,14 @@
     "Segments": [
         {
         "Type": "Power",
-        "Duration": 30,
-        "Setting": 120,
+        "Duration": 5,
+        "Setting": 80,
         "Reps": 1
         },
         {
-        "Type": "Level",
-        "Duration": 20,
-        "Setting": 7,
+        "Type": "Power",
+        "Duration": 10,
+        "Setting": 100,
         "Reps": 1
         }
     ]

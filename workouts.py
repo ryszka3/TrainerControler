@@ -67,11 +67,15 @@ class WorkoutManager():
     def __init__(self, container: DataContainer) -> None:
         self.state:str = "IDLE"
         self.currentWorkout: WorkoutProgram = None
-        self.workoutTimer: int = 0
+        self.workoutStartTime = 0
+        self.lastSaveTime: float = 0
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
         self.currentSegment:WorkoutSegment  = None
         self.dataContainer: DataContainer = container
+
+    def startWorkout(self, workoutID):
+        self.queue.put(QueueEntry("Start", workoutID))
     
     async def run(self, TurboTrainer: FitnessMachine):
         
@@ -79,17 +83,19 @@ class WorkoutManager():
         while(self.dataContainer.programmeRunningFlag == True):
             entry: QueueEntry = None
             
+
             if not self.queue.empty():
                 try:
                     entry = self.queue.get(timeout = 0.2)
                 except:
-                    pass
+                    raise Exception("Queue exception")
 
 
             if self.state == "IDLE": 
                 if not entry == None: 
+                    
                     if entry.type == "Start":   # Starting a new workout
-                     
+                        print("Starting programme no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
                         self.state = "PROGRAM"
                     
@@ -106,19 +112,22 @@ class WorkoutManager():
                                                 datetime.datetime.now().strftime("%X")                                                
                                                 )))
                         csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "Gradient", "Speed")))
+                        print("Workout data file created")
                     
                     except:
                         raise Exception("Failed creating a workout data file!")
                     
+
+                    self.workoutStartTime = time.time()
                     TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
                     TurboTrainer.requestControl()
                     
-                    if TurboTrainer.remoteControlAcquired == True:
-                        TurboTrainer.reset()
+                    #if TurboTrainer.remoteControlAcquired == True:
+                    #    TurboTrainer.reset()
                     
-                    else:
-                        print("Failed to aquire remote control of the fitness machine!")
-                        self.state = "STOP"
+                    #else:
+                    #    print("Failed to aquire remote control of the fitness machine!")
+                    #    self.state = "STOP"
 
                 else:
                     await asyncio.sleep(0.1)
@@ -142,9 +151,11 @@ class WorkoutManager():
                         self.state = "PAUSED"
 
                     elif entry.type == "Set Power":
+                        print("Setting power: ", entry.data)
                         TurboTrainer.setTarget("Power", entry.data)
                     
                     elif entry.type == "Set Level":
+                        print("Setting level: ", entry.data)
                         TurboTrainer.setTarget("Level", entry.data)
                 
                 if self.state == "PROGRAM":
@@ -156,29 +167,36 @@ class WorkoutManager():
                         pass
 
                     if isSegmentTransition: #need to start a new segment OR stop the machine
-                    
                         if len(self.currentWorkout.segments) > 0:
                             
                             self.currentSegment:WorkoutSegment = self.currentWorkout.segments.pop(0)
-                            self.currentSegment.startTime = time.monotonic()
+                            self.currentSegment.startTime = time.time()
                             TurboTrainer.setTarget(self.currentSegment.segmentType, self.currentSegment.setting)
-                            print("new segment")
+                            print("new segment, type:", self.currentSegment.segmentType, 
+                                  " Duration: ", self.currentSegment.duration,
+                                  " Setting: ", self.currentSegment.setting,
+                                  " Start time: ", self.currentSegment.startTime)
                         
                         else:
                             print("end of workout")
                             self.state = "STOP"
                     
 
-                await asyncio.sleep(0.1)
-                oldElapsedTime = self.currentSegment.elapsedTime
-                self.currentSegment.elapsedTime = time.monotonic() - self.currentSegment.startTime
+                
+                self.currentSegment.elapsedTime = time.time() - self.currentSegment.startTime
+                self.dataContainer.workoutTime  = time.time() - self.workoutStartTime
 
-                if self.currentSegment.elapsedTime - oldElapsedTime > 1.0:   # 
+                if self.dataContainer.workoutTime - self.lastSaveTime > 1.0:   # 
                     
-                    self.workoutTimer += self.currentSegment.elapsedTime - oldElapsedTime
+                    self.lastSaveTime = self.dataContainer.workoutTime
+                    print("Saving data, time: ", self.dataContainer.workoutTime)
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
+                    self.dataContainer.updateAverages()
+                
+                await asyncio.sleep(0.01)
         
             if self.state == "STOP":
+                print("Ending  programme")
                 #### Closing the logfile ####
                 try:
                     csvWriter.writerow(self.dataContainer.getIterableAverages())
@@ -190,10 +208,8 @@ class WorkoutManager():
                 ##### reset variables and the state machine #####
                 self.state = "IDLE"
                 self.currentWorkout = None
-                self.workoutTimer = 0
-                self.currentSegment.startTime = 0
+                self.dataContainer.workoutTime = 0
                 self.currentSegment = None
-                self.currentSegment.elapsedTime = 0
 
                 #### Release the fitnes machine
                 TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)

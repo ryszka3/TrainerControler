@@ -43,25 +43,17 @@ class Supervisor:
     def __init__(self) -> None:
         self.queue = queue.SimpleQueue()
 
-    async def loop():
+    async def loop(self):
         
-        await asyncio.sleep(15.0)
+        await asyncio.sleep(5.0)
         print("end Wait1")
+        print(workoutManager.workouts.getWorkoutNames())
 
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_speedCadenceSensorData)
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_control_point)
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_powerSensorData)
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_training_status)
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_status)
+        workoutManager.startWorkout(0)
+        await asyncio.sleep(30.0)
 
-        await asyncio.sleep(5.0)
 
-        device_turboTrainer.requestFeatures()
-        device_turboTrainer.requestSupportedPower()
-        device_turboTrainer.requestSupportedResistance()
-
-        await asyncio.sleep(5.0)
+        #await asyncio.sleep(5.0)
         dataAndFlagContainer.programmeRunningFlag = False
         print("Supervisor Closed")
     
@@ -72,8 +64,8 @@ async def main():
     lock = asyncio.Lock()
 
     await asyncio.gather(
-        connection_to_BLE_Device(lock, device_heartRateSensor, dataAndFlagContainer),
-        connection_to_BLE_Device(lock, device_turboTrainer,    dataAndFlagContainer),
+        #connection_to_BLE_Device(lock, device_heartRateSensor, dataAndFlagContainer),
+        #connection_to_BLE_Device(lock, device_turboTrainer,    dataAndFlagContainer),
         supervisor.loop(),
         workoutManager.run(device_turboTrainer)
     )
