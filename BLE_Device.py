@@ -4,6 +4,7 @@ import contextlib
 #import csv # only for debugging
 #import datetime # only for debugging
 from   bleak        import BleakClient, BleakScanner, BleakGATTCharacteristic
+from   bleak.exc    import BleakDBusError
 from   datatypes    import DataContainer, MinMaxIncrement, QueueEntry
 from   data_parsers import parse_hr_measurement, parse_indoor_bike_data
 
@@ -27,6 +28,99 @@ class BLE_Device:
 
     def writeToService(self, service_uuid, message):
         self.queue.put(QueueEntry('Write', {'UUID': service_uuid, 'Message': message}))
+
+
+    async def connection_to_BLE_Device(self, lock: asyncio.Lock, container: DataContainer):
+    
+        print("starting task:", self.name)
+        while(container.programmeRunningFlag == True):
+
+            if self.connect == False and self.connectionState == False:
+                #print("Staying off")
+                await asyncio.sleep(0.1)
+                continue
+
+            elif self.connectionState == True:
+                raise Exception("This state should never happen")
+            
+            elif self.connect == True and self.connectionState == False:
+                try:
+                    async with contextlib.AsyncExitStack() as stack:
+
+                        # Trying to establish a connection to two+ devices at the same time
+                        # can cause errors, so use a lock to avoid this.
+                        print(self.name, ": awaiting lock")
+                        async with lock:
+                            
+                            print("scanning for ", self.name)
+                            device = await BleakScanner.find_device_by_address(self.address)
+
+                            if device is None:
+                                print(self.name, " not found")
+                                self.connectionState = False
+                                self.connect = False
+                                continue
+
+                            client = BleakClient(device)
+                            
+                            print("connecting to ", self.name)
+
+                            await stack.enter_async_context(client)
+
+                            print("connected to ", self.name)
+                            self.connectionState = True
+
+                            # This will be called immediately before client.__aexit__ when
+                            # the stack context manager exits.
+                            stack.callback(print, "disconnecting from ", self.name)
+
+                        # The lock is released here. The device is still connected and the
+                        # Bluetooth adapter is now free to scan and connect another device
+                        # without disconnecting this one.
+
+                        self.connectionState = True
+                        
+                        while self.connect and container.programmeRunningFlag:  ####    Internal state machine running while connected - Sending commands happen here
+                            await asyncio.sleep(0)
+
+                            if not self.queue.empty():
+                                try:
+                                    entry: QueueEntry = self.queue.get(timeout = 0.2)
+                                    if entry.type == 'Subscribe':
+                                        print("subscribe")
+                                        await client.start_notify(entry.data, self.Callback)
+
+                                    elif entry.type == 'Unsubscribe':
+                                        print('unsub')
+                                        await client.stop_notify(entry.data)
+                                        
+                                    elif entry.type == 'Read':
+                                        print('Read')
+                                        message = await client.read_gatt_char(entry.data)
+                                        self.incomingMessageHandler(entry.data, message)
+                                    
+                                    elif entry.type == 'Write':
+                                        print('Write:\t', entry.data["Message"])
+                                        while(True):
+                                            try:
+                                                await client.write_gatt_char(entry.data["UUID"], entry.data["Message"] , True)
+                                        
+                                            except BleakDBusError as e:
+                                                print("BleakDBusError, retrying...")
+                                                print(e)
+                                                continue
+                                            break
+                                except:
+                                    pass
+
+                    # The stack context manager exits here, triggering disconnection.
+                    self.connectionState = False
+                    print("disconnected from ", self.name)
+
+                except Exception:
+                    pass
+        else:
+            print("stopping task:", self.name)
 
 
 class HeartRateMonitor(BLE_Device):
@@ -82,15 +176,13 @@ class FitnessMachine(BLE_Device):
 
     def reset(self):
         super().writeToService(self.UUID_control_point, b"\x01")
+        self.remoteControlAcquired = False
 
     def requestControl(self):
         super().writeToService(self.UUID_control_point, b"\x00")
 
     def start(self):
-        super().writeToService(self.UUID_control_point, b"\x06")
-
-    def responce(self):
-        super().writeToService(self.UUID_control_point, b"\x80")
+        super().writeToService(self.UUID_control_point, b"\x07")
 
 
     def setTarget(self, type: str, setting: int) -> None:
@@ -102,18 +194,18 @@ class FitnessMachine(BLE_Device):
             super().writeToService(self.UUID_control_point, b"\x04" + setting.to_bytes(1, "little", signed=False))
         
         elif type == "Speed":
-           super().writeToService(self.UUID_control_point, b"\x02" + setting.to_bytes(2, "little", signed=False))
+            super().writeToService(self.UUID_control_point, b"\x02" + setting.to_bytes(2, "little", signed=False))
         
         elif type == "Incline":
             super().writeToService(self.UUID_control_point, b"\x03" + setting.to_bytes(2, "little", signed=True))
 
 
-    def stop(self, parameter):
-        super().writeToService(self.UUID_control_point, b"\x07" + parameter.to_bytes(1, "little", signed=False))
+    def stop(self, parameter: int):
+        super().writeToService(self.UUID_control_point, b"\x08" + parameter.to_bytes(1, "little", signed=False))
 
     def Callback(self, sender: BleakGATTCharacteristic, data):
         print("Sender: ", sender)
-        print("Data: ", data, "\n")
+        print("Data: ", data)
         #wr = ("notify", sender, data)
         #self.csvWriter.writerow(wr) # only for debugging
 
@@ -128,6 +220,28 @@ class FitnessMachine(BLE_Device):
 
         if sender.description == "Cycling Power Measurement":
             pass
+
+        if sender.description == "Fitness Machine Control Point":
+            
+            if data[0] == 0x80: # responce code has to be 0x80
+                
+                result: str = None
+                if data[2] == 0x01:
+                    result = "Success"
+                elif data[2] == 0x02:
+                    result = "Not Supported"
+                elif data[2] == 0x03:
+                    result = "Invalid parameter"
+                elif data[2] == 0x04:
+                    result = "Operation failed"
+                elif data[2] == 0x05:
+                    result = "Control not permitted"
+                
+                if result == "Success" and data[1] == 0x00:  # Responding to request code 0x00, i.e. request control
+                    self.remoteControlAcquired = True
+
+                print("Control point responce: (", data[1], ") -> ", result)
+
 
     def incomingMessageHandler(self, uuid, message):
         if   uuid == self.UUID_features:
@@ -147,87 +261,3 @@ class FitnessMachine(BLE_Device):
 
 
 
-async def connection_to_BLE_Device(lock: asyncio.Lock, dev: BLE_Device, container: DataContainer):
-    
-    print("starting task:", dev.name)
-    while(container.programmeRunningFlag == True):
-
-        if dev.connect == False and dev.connectionState == False:
-            #print("Staying off")
-            await asyncio.sleep(0.1)
-            continue
-
-        elif dev.connectionState == True:
-            raise Exception("This state should never happen")
-        
-        elif dev.connect == True and dev.connectionState == False:
-            try:
-                async with contextlib.AsyncExitStack() as stack:
-
-                    # Trying to establish a connection to two+ devices at the same time
-                    # can cause errors, so use a lock to avoid this.
-                    print(dev.name, ": awaiting lock")
-                    async with lock:
-                        
-                        print("scanning for ", dev.name)
-                        device = await BleakScanner.find_device_by_address(dev.address)
-
-                        if device is None:
-                            print(dev.name, " not found")
-                            dev.connectionState = False
-                            dev.connect = False
-                            continue
-
-                        client = BleakClient(device)
-                        
-                        print("connecting to ", dev.name)
-
-                        await stack.enter_async_context(client)
-
-                        print("connected to ", dev.name)
-                        dev.connectionState = True
-
-                        # This will be called immediately before client.__aexit__ when
-                        # the stack context manager exits.
-                        stack.callback(print, "disconnecting from ", dev.name)
-
-                    # The lock is released here. The device is still connected and the
-                    # Bluetooth adapter is now free to scan and connect another device
-                    # without disconnecting this one.
-
-                    dev.connectionState = True
-                     
-                    while dev.connect and container.programmeRunningFlag:  ####    Internal state machine running while connected - Sending commands happen here
-                        await asyncio.sleep(0.1)
-
-                        if not dev.queue.empty():
-                            try:
-                                entry: QueueEntry = dev.queue.get(timeout = 0.2)
-                                if entry.type == 'Subscribe':
-                                    print("subscribe")
-                                    await client.start_notify(entry.data, dev.Callback)
-
-                                elif entry.type == 'Unsubscribe':
-                                    print('unsub')
-                                    await client.stop_notify(entry.data)
-                                    
-                                elif entry.type == 'Read':
-                                    print('Read')
-                                    message = await client.read_gatt_char(entry.data)
-                                    dev.incomingMessageHandler(entry.data, message)
-                                
-                                elif entry.type == 'Write':
-                                    print('Write')
-                                    await client.write_gatt_char(entry.data["UUID"], entry.data["Message"] , True)
-                                
-                            except:
-                                pass
-
-                # The stack context manager exits here, triggering disconnection.
-                dev.connectionState = False
-                print("disconnected from ", dev.name)
-
-            except Exception:
-                pass
-    else:
-        print("stopping task:", dev.name)

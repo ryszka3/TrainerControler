@@ -1,30 +1,19 @@
 
 
-class cd:
-    def __init__(self) -> None:
-        self.hr = 17
-        self.flag: bool = True
+data = (0x80, 0x01, 0x03)
 
-currentData = cd()
-
-bar = 17
-
-
-class foo:
-    def __init__(self, dataContainer: cd) -> None:
-        self.internal = 5
-        self.container = dataContainer
-    
-    def callback(self, data):
-        self.container.hr = data + 5
-        print(self.container.flag)
-
-kl = foo(currentData)
- 
-currentData.flag = False
+result: str = None
+if data[2] == 0x01:
+    result = "Success"
+elif data[2] == 0x02:
+    result = "Not Supported"
+elif data[2] == 0x03:
+    result = "Invalid parameter"
+elif data[2] == 0x04:
+    result = "Operation failed"
+elif data[2] == 0x05:
+    result = "Control not permitted"
 
 
-kl.callback(5)
 
-
-print(currentData.hr)
+print("Control point responce: (", data[1], ") -> ", result)

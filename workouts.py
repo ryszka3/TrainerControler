@@ -102,6 +102,36 @@ class WorkoutManager():
                     elif entry.type == "Freeride":
                         self.state = "FREERIDE"
                     
+                    TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
+
+                    while iteration <= 3 :
+                        iteration += 1
+
+                        #initialisation command sequence:
+                        TurboTrainer.requestControl()
+                        TurboTrainer.reset()
+                        TurboTrainer.requestControl()
+
+                        #wait until device command queue empty but max 3 seconds
+                        iterator2 :int = 1
+                        while iterator2 < 6:
+                            await asyncio.sleep(0.5)
+                            if TurboTrainer.queue.empty() == True:
+                                break
+                            iterator2 += 1
+
+                        if TurboTrainer.remoteControlAcquired == True:
+                            break
+                        
+                        iteration :int = 1
+                    
+                    if TurboTrainer.remoteControlAcquired == True:
+                        self.workoutStartTime = time.time()
+                    else:
+                        print("Failed to aquire remote control of the fitness machine!")
+                        self.state = "STOP"
+                        continue
+
                     try:
                         workout_logfile = open(datetime.datetime.now().strftime("Workouts/Workout-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
                         csvWriter = csv.writer(workout_logfile, dialect='excel')
@@ -117,18 +147,6 @@ class WorkoutManager():
                     except:
                         raise Exception("Failed creating a workout data file!")
                     
-
-                    self.workoutStartTime = time.time()
-                    TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
-                    TurboTrainer.requestControl()
-                    
-                    #if TurboTrainer.remoteControlAcquired == True:
-                    #    TurboTrainer.reset()
-                    
-                    #else:
-                    #    print("Failed to aquire remote control of the fitness machine!")
-                    #    self.state = "STOP"
-
                 else:
                     await asyncio.sleep(0.1)
             
@@ -213,6 +231,7 @@ class WorkoutManager():
 
                 #### Release the fitnes machine
                 TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)
+                TurboTrainer.remoteControlAcquired = False
         else:
             print("Workout manager closed")
 
