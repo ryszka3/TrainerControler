@@ -3,7 +3,7 @@
     "Name": "My Workout No1",
     "Segments": [
         {
-        "Type": "Power",
+        "Type": "Level",
         "Duration": 10,
         "Setting": 100,
         "Reps": 1
@@ -11,7 +11,7 @@
         {
         "Type": "Level",
         "Duration": 10,
-        "Setting": 150,
+        "Setting": 20,
         "Reps": 1
         }
     ]

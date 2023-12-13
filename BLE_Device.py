@@ -160,8 +160,6 @@ class FitnessMachine(BLE_Device):
 
     def __init__(self, container: DataContainer):
         super().__init__()
-        #self.logfile = open(datetime.datetime.now().strftime("Logfile-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
-        #self.csvWriter = csv.writer(self.logfile, dialect='excel') # only for debugging
         self.dataContainer = container
         self.remoteControlAcquired: bool = False
 
@@ -200,20 +198,22 @@ class FitnessMachine(BLE_Device):
             super().writeToService(self.UUID_control_point, b"\x03" + setting.to_bytes(2, "little", signed=True))
 
 
-    def stop(self, parameter: int):
-        super().writeToService(self.UUID_control_point, b"\x08" + parameter.to_bytes(1, "little", signed=False))
+    def stop(self):
+        super().writeToService(self.UUID_control_point, b"\x08\x01")
 
+    def pause(self):
+        super().writeToService(self.UUID_control_point, b"\x08\x02")
+    
     def Callback(self, sender: BleakGATTCharacteristic, data):
         print("Sender: ", sender)
         print("Data: ", data)
-        #wr = ("notify", sender, data)
-        #self.csvWriter.writerow(wr) # only for debugging
 
         if sender.description == "Indoor Bike Data":
             parsedData = parse_indoor_bike_data(data)
             self.dataContainer.momentary.cadence = parsedData.instant_cadence
             self.dataContainer.momentary.power = parsedData.instant_power
             self.dataContainer.momentary.speed = parsedData.instant_speed
+            self.dataContainer.updateAveragesAndMaximums()
             
         if sender.description == "CSC Measurement":
             pass

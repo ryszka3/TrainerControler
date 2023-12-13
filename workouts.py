@@ -97,20 +97,20 @@ class WorkoutManager():
                     if entry.type == "Start":   # Starting a new workout
                         print("Starting programme no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
-                        self.state = "PROGRAM"
+                        self.state = "WARMUP-PROGRAM"
                     
                     elif entry.type == "Freeride":
-                        self.state = "FREERIDE"
+                        self.state = "WARMUP-FREERIDE"
                     
                     TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
-
+                    iteration :int = 1
                     while iteration <= 3 :
-                        iteration += 1
-
+                        
                         #initialisation command sequence:
                         TurboTrainer.requestControl()
                         TurboTrainer.reset()
                         TurboTrainer.requestControl()
+                        TurboTrainer.start()
 
                         #wait until device command queue empty but max 3 seconds
                         iterator2 :int = 1
@@ -123,11 +123,10 @@ class WorkoutManager():
                         if TurboTrainer.remoteControlAcquired == True:
                             break
                         
-                        iteration :int = 1
+                        iteration += 1
+
                     
-                    if TurboTrainer.remoteControlAcquired == True:
-                        self.workoutStartTime = time.time()
-                    else:
+                    if TurboTrainer.remoteControlAcquired == False:
                         print("Failed to aquire remote control of the fitness machine!")
                         self.state = "STOP"
                         continue
@@ -150,10 +149,18 @@ class WorkoutManager():
                 else:
                     await asyncio.sleep(0.1)
             
+            if self.state == "WARMUP-PROGRAM" or self.state == "WARMUP-FREERIDE":
+                
+                await asyncio.sleep(3.0)
+                self.state = self.state.removeprefix("WARMUP-")
+                self.workoutStartTime = time.time()
 
-            if self.state == "PAUSED":
+
+
+            if self.state == "PAUSED-PROGRAM" or self.state == "PAUSED_FREERIDE":
                 if not entry == None: 
                     if entry.type == "Start":   # Resume
+                        TurboTrainer.start()
                         self.state = "PROGRAM"
                 else:
                     await asyncio.sleep(0.1)
@@ -166,7 +173,8 @@ class WorkoutManager():
                         self.state = "STOP"
                     
                     elif entry.type == "Pause": # Pause the workout, go to PAUSE and await futher instructions
-                        self.state = "PAUSED"
+                        TurboTrainer.pause()
+                        self.state = "PAUSED-" + self.state
 
                     elif entry.type == "Set Power":
                         print("Setting power: ", entry.data)
@@ -209,7 +217,6 @@ class WorkoutManager():
                     self.lastSaveTime = self.dataContainer.workoutTime
                     print("Saving data, time: ", self.dataContainer.workoutTime)
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
-                    self.dataContainer.updateAverages()
                 
                 await asyncio.sleep(0.01)
         
@@ -231,7 +238,8 @@ class WorkoutManager():
 
                 #### Release the fitnes machine
                 TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)
-                TurboTrainer.remoteControlAcquired = False
+                TurboTrainer.stop()
+                TurboTrainer.reset()
         else:
             print("Workout manager closed")
 

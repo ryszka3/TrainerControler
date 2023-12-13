@@ -63,7 +63,8 @@ class DataContainer:
         self.NoAverage:int = 0
         self.programmeRunningFlag = True
 
-    def updateAverages(self):
+    def updateAveragesAndMaximums(self):
+        #### Update averages:
         newNoAverage = self.NoAverage + 1
         self.average.cadence = (self.momentary.cadence +(self.NoAverage * self.average.cadence) / newNoAverage)
         self.average.power = (self.momentary.power +(self.NoAverage * self.average.power) / newNoAverage)
@@ -71,6 +72,14 @@ class DataContainer:
         self.average.gradient = (self.momentary.gradient +(self.NoAverage * self.average.gradient) / newNoAverage)
         self.average.speed = (self.momentary.speed +(self.NoAverage * self.average.speed) / newNoAverage)
         self.NoAverage += 1
+
+        #### Update Maximums:
+        self.max.cadence = max(self.max.cadence, self.momentary.cadence)
+        self.max.power =  max(self.max.power, self.momentary.power)
+        self.max.heartRate = max(self.max.heartRate, self.momentary.heartRate)
+        self.max.gradient = max(self.max.gradient, self.momentary.gradient)
+        self.max.speed = max(self.max.speed, self.momentary.speed)
+        
 
     def getIterableRecord(self):
         
