@@ -103,8 +103,8 @@ class WorkoutManager():
                         self.state = "WARMUP-FREERIDE"
                     
                     TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
-                    iteration :int = 1
-                    while iteration <= 3 :
+                    
+                    for i in range(3):
                         
                         #initialisation command sequence:
                         TurboTrainer.requestControl()
@@ -113,17 +113,13 @@ class WorkoutManager():
                         TurboTrainer.start()
 
                         #wait until device command queue empty but max 3 seconds
-                        iterator2 :int = 1
-                        while iterator2 < 6:
+                        for j in range(6):
                             await asyncio.sleep(0.5)
                             if TurboTrainer.queue.empty() == True:
                                 break
-                            iterator2 += 1
 
                         if TurboTrainer.remoteControlAcquired == True:
                             break
-                        
-                        iteration += 1
 
                     
                     if TurboTrainer.remoteControlAcquired == False:

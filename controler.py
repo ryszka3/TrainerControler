@@ -47,9 +47,16 @@ class Supervisor:
         
         await asyncio.sleep(20.0)
         print("end Wait1")
+        if device_heartRateSensor.connectionState == True:
+            device_heartRateSensor.subscribeToService()
+        if device_turboTrainer.connectionState == True:
+            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+
         print(workoutManager.workouts.getWorkoutNames())
         workoutManager.startWorkout(0)
         await asyncio.sleep(30.0)
+        while workoutManager.state != "IDLE":
+            await asyncio.sleep(1) 
         dataAndFlagContainer.programmeRunningFlag = False
         print("Supervisor Closed")
     
@@ -60,7 +67,7 @@ async def main():
     lock = asyncio.Lock()
 
     await asyncio.gather(
-        #device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
+        device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
         device_turboTrainer.connection_to_BLE_Device(lock, dataAndFlagContainer),
         supervisor.loop(),
         workoutManager.run(device_turboTrainer)

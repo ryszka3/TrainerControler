@@ -1,11 +1,3 @@
 
-state = "PROGRAM"
-
-
-state = "PAUSED-" + state
-
-print(state)
-
-state = state.removeprefix("PAUSED-")
-
-print(state)
+for i in range(4):
+    print(i)

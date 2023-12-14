@@ -1,35 +1,53 @@
 [
     {
-    "Name": "My Workout No1",
+    "Name": "My Test Workout",
     "Segments": [
         {
-        "Type": "Level",
+        "Type": "Power",
         "Duration": 10,
         "Setting": 100,
         "Reps": 1
         },
         {
-        "Type": "Level",
+        "Type": "Power",
         "Duration": 10,
-        "Setting": 20,
+        "Setting": 150,
         "Reps": 1
         }
     ]
     },
     {
-    "Name": "My Workout No2",
+    "Name": "15 Min 100W",
     "Segments": [
         {
         "Type": "Power",
-        "Duration": 5,
-        "Setting": 130,
-        "Reps": 3
+        "Duration": 15,
+        "Setting": 80,
+        "Reps": 1
         },
         {
         "Type": "Power",
-        "Duration": 255,
-        "Setting": 200,
-        "Reps": 2
+        "Duration": 30,
+        "Setting": 90,
+        "Reps": 1
+        },
+		{
+        "Type": "Power",
+        "Duration": 540,
+        "Setting": 100,
+        "Reps": 1
+        },
+        {
+        "Type": "Power",
+        "Duration": 240,
+        "Setting": 110,
+        "Reps": 1
+        },
+		{
+        "Type": "Power",
+        "Duration": 60,
+        "Setting": 80,
+        "Reps": 1
         }
     ]
     }

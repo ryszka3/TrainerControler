@@ -66,11 +66,11 @@ class DataContainer:
     def updateAveragesAndMaximums(self):
         #### Update averages:
         newNoAverage = self.NoAverage + 1
-        self.average.cadence = (self.momentary.cadence +(self.NoAverage * self.average.cadence) / newNoAverage)
-        self.average.power = (self.momentary.power +(self.NoAverage * self.average.power) / newNoAverage)
-        self.average.heartRate = (self.momentary.heartRate +(self.NoAverage * self.average.heartRate) / newNoAverage)
-        self.average.gradient = (self.momentary.gradient +(self.NoAverage * self.average.gradient) / newNoAverage)
-        self.average.speed = (self.momentary.speed +(self.NoAverage * self.average.speed) / newNoAverage)
+        self.average.cadence = (self.momentary.cadence +(self.NoAverage * self.average.cadence)) / newNoAverage
+        self.average.power = (self.momentary.power +(self.NoAverage * self.average.power)) / newNoAverage
+        self.average.heartRate = (self.momentary.heartRate +(self.NoAverage * self.average.heartRate)) / newNoAverage
+        self.average.gradient = (self.momentary.gradient +(self.NoAverage * self.average.gradient)) / newNoAverage
+        self.average.speed = (self.momentary.speed +(self.NoAverage * self.average.speed)) / newNoAverage
         self.NoAverage += 1
 
         #### Update Maximums:
