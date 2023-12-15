@@ -24,7 +24,7 @@ class Workouts:
             segments = list()
 
             for seg in entry["Segments"]:
-                thisSegment = WorkoutSegment(seg["Type"], seg["Duration"], seg["Setting"], seg["Reps"])
+                thisSegment = WorkoutSegment(seg["Type"], seg["Duration"], seg["Setting"])
                 segments.append(thisSegment)
 
             workout = WorkoutProgram(entry["Name"], segments)
@@ -52,19 +52,22 @@ class Workouts:
         segment: WorkoutSegment
         for segment in self.listOfWorkout[workoutID].segments: 
             totalDuration += segment.duration
-            noSegments += segment.reps
+            noSegments += 1
             if segment.segmentType == "Power":
-                averagePower += segment.setting * segment.reps
+                averagePower += segment.setting
             elif segment.segmentType     == "Level":
-                averageLevel += segment.setting * segment.reps
+                averageLevel += segment.setting
         
         averagePower /= noSegments
         averageLevel /= noSegments
 
         return WorkoutParameters(self.listOfWorkout[workoutID].name, totalDuration, averagePower, averageLevel, noSegments)
 
+
+
 class WorkoutManager():
-    def __init__(self, container: DataContainer) -> None:
+    
+    def __init__(self) -> None:
         self.state:str = "IDLE"
         self.currentWorkout: WorkoutProgram = None
         self.workoutStartTime = 0
@@ -72,14 +75,16 @@ class WorkoutManager():
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
         self.currentSegment:WorkoutSegment  = None
-        self.dataContainer: DataContainer = container
+        self.dataContainer: DataContainer = None
 
     def startWorkout(self, workoutID):
         self.queue.put(QueueEntry("Start", workoutID))
     
-    async def run(self, TurboTrainer: FitnessMachine):
+    async def run(self, TurboTrainer: FitnessMachine, container: DataContainer):
         
+        self.dataContainer = container
         print("starting workout manager")
+        
         while(self.dataContainer.programmeRunningFlag == True):
             entry: QueueEntry = None
             

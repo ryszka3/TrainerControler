@@ -16,9 +16,10 @@ class BLE_Device:
         self.connect: bool = True
         self.connectionState: bool = False
         self.queue = queue.SimpleQueue()
+        self.dataContainer: DataContainer = None
 
-    def subscribeToService(self, service_uuid):
-        self.queue.put(QueueEntry('Subscribe', service_uuid))
+    def subscribeToService(self, service_uuid, callback):
+        self.queue.put(QueueEntry('Subscribe', {'UUID': service_uuid, 'Callback': callback}))
 
     def unsubscribeFromService(self, service_uuid):
         self.queue.put(QueueEntry('Unsubscribe', service_uuid))
@@ -31,9 +32,10 @@ class BLE_Device:
 
 
     async def connection_to_BLE_Device(self, lock: asyncio.Lock, container: DataContainer):
-    
+        
+        self.dataContainer = container
         print("starting task:", self.name)
-        while(container.programmeRunningFlag == True):
+        while(self.dataContainer.programmeRunningFlag == True):
 
             if self.connect == False and self.connectionState == False:
                 #print("Staying off")
@@ -87,20 +89,26 @@ class BLE_Device:
                                 try:
                                     entry: QueueEntry = self.queue.get(timeout = 0.2)
                                     if entry.type == 'Subscribe':
-                                        print("subscribe")
-                                        await client.start_notify(entry.data, self.Callback)
+                                        #print("subscribe")
+                                       
+                                        if entry.data["Callback"] is None:
+                                            funtionToRegisterForCallback = self.Callback
+                                        else:
+                                            funtionToRegisterForCallback = entry.data["Callback"]
+
+                                        await client.start_notify(entry.data["UUID"], funtionToRegisterForCallback)
 
                                     elif entry.type == 'Unsubscribe':
-                                        print('unsub')
-                                        await client.stop_notify(entry.data)
+                                        #print('unsub')
+                                        await client.stop_notify(entry.data["UUID"])
                                         
                                     elif entry.type == 'Read':
-                                        print('Read')
+                                        #print('Read')
                                         message = await client.read_gatt_char(entry.data)
                                         self.incomingMessageHandler(entry.data, message)
                                     
                                     elif entry.type == 'Write':
-                                        print('Write:\t', entry.data["Message"])
+                                        #print('Write:\t', entry.data["Message"])
                                         while(True):
                                             try:
                                                 await client.write_gatt_char(entry.data["UUID"], entry.data["Message"] , True)
@@ -126,12 +134,11 @@ class BLE_Device:
 class HeartRateMonitor(BLE_Device):
     UUID_HR_measurement: str = '00002a37-0000-1000-8000-00805f9b34fb'
     
-    def __init__(self, container: DataContainer):
+    def __init__(self):
         super().__init__()
-        self.dataContainer = container
 
     def subscribeToService(self):
-        return super().subscribeToService(self.UUID_HR_measurement)
+        return super().subscribeToService(self.UUID_HR_measurement, self.Callback)
     
     def unsubscribeFromService(self):
         return super().unsubscribeFromService(self.UUID_HR_measurement)
@@ -158,9 +165,8 @@ class FitnessMachine(BLE_Device):
     supported_resistance = MinMaxIncrement()
     supported_power = MinMaxIncrement()
 
-    def __init__(self, container: DataContainer):
+    def __init__(self):
         super().__init__()
-        self.dataContainer = container
         self.remoteControlAcquired: bool = False
 
     def requestSupportedPower(self):
@@ -185,17 +191,17 @@ class FitnessMachine(BLE_Device):
 
     def setTarget(self, type: str, setting: int) -> None:
         
-        if   type == "Power":
-            super().writeToService(self.UUID_control_point, b"\x05" + setting.to_bytes(2, "little", signed=True))
-        
-        elif type == "Level":
-            super().writeToService(self.UUID_control_point, b"\x04" + setting.to_bytes(1, "little", signed=False))
-        
-        elif type == "Speed":
+        if   type == "Speed":
             super().writeToService(self.UUID_control_point, b"\x02" + setting.to_bytes(2, "little", signed=False))
         
         elif type == "Incline":
             super().writeToService(self.UUID_control_point, b"\x03" + setting.to_bytes(2, "little", signed=True))
+
+        elif type == "Level":
+            super().writeToService(self.UUID_control_point, b"\x04" + setting.to_bytes(1, "little", signed=False))
+        
+        elif type == "Power":
+            super().writeToService(self.UUID_control_point, b"\x05" + setting.to_bytes(2, "little", signed=True))
 
 
     def stop(self):
@@ -205,8 +211,8 @@ class FitnessMachine(BLE_Device):
         super().writeToService(self.UUID_control_point, b"\x08\x02")
     
     def Callback(self, sender: BleakGATTCharacteristic, data):
-        print("Sender: ", sender)
-        print("Data: ", data)
+        #print("Sender: ", sender)
+        #print("Data: ", data)
 
         if sender.description == "Indoor Bike Data":
             parsedData = parse_indoor_bike_data(data)

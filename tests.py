@@ -1,3 +1,3 @@
+import shutil
 
-for i in range(4):
-    print(i)
+shutil.copytree("Workouts", "C:/users/MichalRyszka/Desktop/Workouts", dirs_exist_ok = True)

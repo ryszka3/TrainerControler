@@ -5,14 +5,12 @@
         {
         "Type": "Power",
         "Duration": 10,
-        "Setting": 100,
-        "Reps": 1
+        "Setting": 100
         },
         {
         "Type": "Power",
         "Duration": 10,
-        "Setting": 150,
-        "Reps": 1
+        "Setting": 150
         }
     ]
     },
@@ -22,32 +20,27 @@
         {
         "Type": "Power",
         "Duration": 15,
-        "Setting": 80,
-        "Reps": 1
+        "Setting": 80
         },
         {
         "Type": "Power",
         "Duration": 30,
-        "Setting": 90,
-        "Reps": 1
+        "Setting": 90
         },
 		{
         "Type": "Power",
         "Duration": 540,
-        "Setting": 100,
-        "Reps": 1
+        "Setting": 100
         },
         {
         "Type": "Power",
         "Duration": 240,
-        "Setting": 110,
-        "Reps": 1
+        "Setting": 110
         },
 		{
         "Type": "Power",
         "Duration": 60,
-        "Setting": 80,
-        "Reps": 1
+        "Setting": 80
         }
     ]
     }

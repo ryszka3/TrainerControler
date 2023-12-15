@@ -1,4 +1,28 @@
 import copy
+import json
+import datetime
+from collections import namedtuple
+
+
+User = namedtuple("User", ["Name", "Max_HR", "FTP"])
+
+class UserList:
+    def __init__(self) -> None:
+        
+        try:
+            json_file = open('users.json', 'r+t')
+        except:
+            raise Exception("Failed opening JSON file")
+        
+        json_data: list = json.load(json_file)
+        self.listOfUsers: list = list()
+
+        for entry in json_data:
+            maxhr = 220 - int(datetime.datetime.now().strftime("%Y")) + int(entry["Year_of_Birth"])
+            record = User(entry["Name"], maxhr, entry["FTP"])
+            self.listOfUsers.append(record)
+
+
 
 class MinMaxIncrement:
     def __init__(self) -> None:
@@ -16,11 +40,10 @@ class WorkoutProgram:
 
 
 class WorkoutSegment:
-    def __init__(self, segType: str, dur: int, set: int, rep: int) -> None:
+    def __init__(self, segType: str, dur: int, set: int) -> None:
         self.segmentType: str = segType
         self.duration: int = dur
         self.setting: int = set
-        self.reps: int = rep
         self.startTime = 0
         self.elapsedTime = 0
 
@@ -62,6 +85,10 @@ class DataContainer:
         self.max: Dataset = Dataset()
         self.NoAverage:int = 0
         self.programmeRunningFlag = True
+        self.activeUser: User = None
+
+    def assignUser(self, user):
+        self.activeUser = user
 
     def updateAveragesAndMaximums(self):
         #### Update averages:
