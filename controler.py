@@ -52,11 +52,11 @@ class Supervisor:
         print("end Wait1")
         if device_heartRateSensor.connectionState == True:
             device_heartRateSensor.subscribeToService()
-        if device_turboTrainer.connectionState == True:
-            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data) # should register for internal callback automatically, but check it plz 
+        #if device_turboTrainer.connectionState == True:
+        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
 
         print(workoutManager.workouts.getWorkoutNames())
-        workoutManager.startWorkout(0)
+        workoutManager.startWorkout(1)
         await asyncio.sleep(30.0)
         while workoutManager.state != "IDLE":
             await asyncio.sleep(1) 

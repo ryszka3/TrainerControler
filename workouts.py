@@ -141,7 +141,7 @@ class WorkoutManager():
                                                 "at:",
                                                 datetime.datetime.now().strftime("%X")                                                
                                                 )))
-                        csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "Gradient", "Speed")))
+                        csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
                         print("Workout data file created")
                     
                     except:
@@ -216,7 +216,7 @@ class WorkoutManager():
                 if self.dataContainer.workoutTime - self.lastSaveTime > 1.0:   # 
                     
                     self.lastSaveTime = self.dataContainer.workoutTime
-                    print("Saving data, time: ", self.dataContainer.workoutTime)
+                    #print("Saving data, time: ", self.dataContainer.workoutTime)
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
                 
                 await asyncio.sleep(0.01)
@@ -229,7 +229,7 @@ class WorkoutManager():
                     csvWriter.writerow(self.dataContainer.getIterableMaximums())
                     workout_logfile.close()
                 except:
-                    raise Exception("Failed to close the workout data file!")
+                    pass
 
                 ##### reset variables and the state machine #####
                 self.state = "IDLE"

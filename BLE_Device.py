@@ -18,7 +18,7 @@ class BLE_Device:
         self.queue = queue.SimpleQueue()
         self.dataContainer: DataContainer = None
 
-    def subscribeToService(self, service_uuid, callback):
+    def subscribeToService(self, service_uuid, callback = None):
         self.queue.put(QueueEntry('Subscribe', {'UUID': service_uuid, 'Callback': callback}))
 
     def unsubscribeFromService(self, service_uuid):
@@ -147,7 +147,21 @@ class HeartRateMonitor(BLE_Device):
         if sender.description == "Heart Rate Measurement":  # sanity check if the correct sensor 
             currentReading = parse_hr_measurement(data)
             self.dataContainer.momentary.heartRate = currentReading.bpm
-            print(sender.description, " bpm: ", currentReading.bpm)
+            zone: str = None
+            if currentReading.bpm < (self.dataContainer.activeUser.Max_HR * 0.60):
+                zone = "Recovery"
+            elif currentReading.bpm < (self.dataContainer.activeUser.Max_HR * 0.70):
+                zone = "Aerobic"
+            elif currentReading.bpm < (self.dataContainer.activeUser.Max_HR * 0.80):
+                zone = "Tempo"
+            elif currentReading.bpm < (self.dataContainer.activeUser.Max_HR * 0.90):
+                zone = "Threshold"
+            else:
+                zone = "Anaerobic"
+            self.dataContainer.momentary.hrZone = zone
+
+
+            #print(sender.description, " bpm: ", currentReading.bpm)
 
 
 class FitnessMachine(BLE_Device):

@@ -18,7 +18,7 @@ class UserList:
         self.listOfUsers: list = list()
 
         for entry in json_data:
-            maxhr = 220 - int(datetime.datetime.now().strftime("%Y")) + int(entry["Year_of_Birth"])
+            maxhr = 220 - int(datetime.datetime.now().strftime("%Y")) + entry["YearOfBirth"]
             record = User(entry["Name"], maxhr, entry["FTP"])
             self.listOfUsers.append(record)
 
@@ -68,11 +68,13 @@ class Dataset:
         self.heartRate: int = 0
         self.gradient: int = 0
         self.speed: float = 0
+        self.hrZone: str = 0
     
     def getIterableRecord(self):
         return list((self.cadence,
                      self.power,
                      self.heartRate,
+                     self.hrZone,
                      self.gradient,
                      self.speed))
 
