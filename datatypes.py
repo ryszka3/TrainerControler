@@ -82,12 +82,14 @@ class Dataset:
 class DataContainer:
     def __init__(self):
         self.workoutTime: int = 0
+        self.workoutDuration: int = 0
         self.momentary: Dataset = Dataset()
         self.average: Dataset = Dataset()
         self.max: Dataset = Dataset()
         self.NoAverage:int = 0
         self.programmeRunningFlag = True
         self.activeUser: User = None
+        self.currentSegment: WorkoutSegment = None
 
     def assignUser(self, user):
         self.activeUser = user

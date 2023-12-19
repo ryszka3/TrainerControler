@@ -74,7 +74,6 @@ class WorkoutManager():
         self.lastSaveTime: float = 0
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
-        self.currentSegment:WorkoutSegment  = None
         self.dataContainer: DataContainer = None
 
     def startWorkout(self, workoutID):
@@ -102,6 +101,7 @@ class WorkoutManager():
                     if entry.type == "Start":   # Starting a new workout
                         print("Starting programme no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
+                        self.dataContainer.workoutDuration = self.workouts.getWorkoutParameters(entry.data).totalDuration
                         self.state = "WARMUP-PROGRAM"
                     
                     elif entry.type == "Freeride":
@@ -188,7 +188,7 @@ class WorkoutManager():
                 if self.state == "PROGRAM":
                     isSegmentTransition: bool = True
                     try:
-                        if self.currentSegment.elapsedTime < self.currentSegment.duration:
+                        if self.dataContainer.currentSegment.elapsedTime < self.dataContainer.currentSegment.duration:
                             isSegmentTransition = False
                     except:
                         pass
@@ -196,13 +196,13 @@ class WorkoutManager():
                     if isSegmentTransition: #need to start a new segment OR stop the machine
                         if len(self.currentWorkout.segments) > 0:
                             
-                            self.currentSegment:WorkoutSegment = self.currentWorkout.segments.pop(0)
-                            self.currentSegment.startTime = time.time()
-                            TurboTrainer.setTarget(self.currentSegment.segmentType, self.currentSegment.setting)
-                            print("new segment, type:", self.currentSegment.segmentType, 
-                                  " Duration: ", self.currentSegment.duration,
-                                  " Setting: ", self.currentSegment.setting,
-                                  " Start time: ", self.currentSegment.startTime)
+                            self.dataContainer.currentSegment:WorkoutSegment = self.currentWorkout.segments.pop(0)
+                            self.dataContainer.currentSegment.startTime = time.time()
+                            TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
+                            print("new segment, type:", self.dataContainer.currentSegment.segmentType, 
+                                  " Duration: ", self.dataContainer.currentSegment.duration,
+                                  " Setting: ", self.dataContainer.currentSegment.setting,
+                                  " Start time: ", self.dataContainer.currentSegment.startTime)
                         
                         else:
                             print("end of workout")
@@ -210,7 +210,7 @@ class WorkoutManager():
                     
 
                 
-                self.currentSegment.elapsedTime = time.time() - self.currentSegment.startTime
+                self.dataContainer.currentSegment.elapsedTime = time.time() - self.dataContainer.currentSegment.startTime
                 self.dataContainer.workoutTime  = time.time() - self.workoutStartTime
 
                 if self.dataContainer.workoutTime - self.lastSaveTime > 1.0:   # 
@@ -235,7 +235,9 @@ class WorkoutManager():
                 self.state = "IDLE"
                 self.currentWorkout = None
                 self.dataContainer.workoutTime = 0
-                self.currentSegment = None
+                self.dataContainer.currentSegment = None
+                self.dataContainer.workoutDuration = 0
+
 
                 #### Release the fitnes machine
                 TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)
