@@ -6,33 +6,53 @@ from PIL import ImageFont
 #import Adafruit_ILI9341 as TFT
 #import Adafruit_GPIO.SPI as SPI
 
-from datatypes import DataContainer, WorkoutSegment
+from datatypes import DataContainer, WorkoutSegment, WorkoutParameters
+from workouts  import Workouts
+
+def formatTime(dur: int) -> str:
+    minutes: int = int(dur / 60)
+    hours:int = int(minutes / 60)
+    minutes -= hours * 60
+    seconds = dur - hours * 60 * 60 -minutes * 60
+    
+    ret = str()
+    if hours < 10:
+        ret += "0"
+    ret += str(hours) + ":"
+    if minutes < 10:
+        ret += "0"
+    ret += str(minutes) + ":"
+    if seconds <10:
+        ret += "0"
+    ret += str(seconds)
+
+    return ret
+
 
 class ScreenManager:
     
     dataContainer = DataContainer()
     
     def __init__(self) -> None:
-       
-
         
-        self.WIDTH = 320
+        self.WIDTH  = 320
         self.HEIGHT = 240
         BUS_FREQUENCY = 4000000
         # Raspberry Pi configuration
-        PIN_DC = 24
-        PIN_RST = 25
-        SPI_PORT = 0
+        PIN_DC     = 24
+        PIN_RST    = 25
+        SPI_PORT   = 0
         SPI_DEVICE = 0
 
         self.X_POS_START: int  = 12
         self.Y_POS_START: int  = 6
 
-        self.COLOUR_BG: tuple      = (31,   31,  31)
-        self.COLOUR_FILL: tuple    = (139, 175, 255)
-        self.COLOUR_OUTLINE: tuple = (208, 220, 170)
-        self.COLOUR_TEXT: tuple    = (156, 223, 250)
-        self.COLOUR_BUTTON: tuple  = (200,  60, 100)
+        self.COLOUR_BG:       tuple = (31,   31,  31)
+        self.COLOUR_BG_LIGHT: tuple = (62,   62,  62)
+        self.COLOUR_FILL:     tuple = (139, 175, 255)
+        self.COLOUR_OUTLINE:  tuple = (208, 220, 170)
+        self.COLOUR_TEXT:     tuple = (156, 223, 250)
+        self.COLOUR_BUTTON:   tuple = (200,  60, 100)
 
         #self.display = TFT.ILI9341(dc     = PIN_DC, 
         #                           rst    = PIN_RST, 
@@ -40,9 +60,9 @@ class ScreenManager:
           #                         width  = self.WIDTH, 
            #                        height = self.HEIGHT)
         #self.display.begin()
-        #self.display.clear(self.COLOUR_BG)    # Clear to black
+        #self.display.clear(self.COLOUR_BG)    # Clear to background
 
-        self.chartsData = [list([0]), list([0]), list([0]), list([0])]
+        #self.chartsData = [list([0]), list([0]), list([0]), list([0])]
         self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
 
     def assignDataContainer (self, container: DataContainer):
@@ -60,22 +80,184 @@ class ScreenManager:
         if pageID == "Programmes":
             pass
         if pageID == "WorkoutStart":
-            self.drawPageWorkout()
+           self.drawProgrammeSelector()
 
         if pageID == "WorkoutRunning":
-            pass
+            self.drawPageWorkout()
+
         if pageID == "WorkoutSave":
             pass
 
         self.display.display()
+
+    def drawProgrammeSelector(self, listOfParametres: list):
+        #self.display.clear(self.COLOUR_BG)
+        #draw = self.display.draw() # Get a PIL Draw object
+        draw = ImageDraw.Draw(self.im)
+        font = ImageFont.load_default(14)
+        draw.text(xy = (self.WIDTH / 2, self.Y_POS_START), 
+                    text = "Select programme", # Box title
+                    fill = self.COLOUR_TEXT,
+                    font = font,
+                    anchor="mt")
+
+        X_offset_start = 0
+        Y_offset_start = 30
+        box_width_height = (140, 85)
+        chartWidth = box_width_height[0]-10
+        chartHeight = 30
+
+        for i in range(2):
+            
+            Y_offset = Y_offset_start
+                  
+            for j in range(2):
+                progID = i*2+j
+                if progID > len(listOfParametres) - 1:
+                    break
+
+                thisWorkoutParams: WorkoutParameters = listOfParametres[progID]
+                
+                X_offset = X_offset_start
+
+                box_left_top = (self.X_POS_START + X_offset, self.Y_POS_START + Y_offset)
+                draw.rounded_rectangle(xy = (box_left_top[0] - 4, box_left_top[1] - 4, 
+                                            box_left_top[0] + box_width_height[0], box_left_top[1] + box_width_height[1]),
+                                        radius = 3,
+                                        fill = self.COLOUR_BG_LIGHT,
+                                        outline = self.COLOUR_BG_LIGHT,
+                                        width = 1)
+
+
+
+                font = ImageFont.load_default(12)
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text =  thisWorkoutParams.name, # Box title
+                            fill = self.COLOUR_TEXT,
+                            font = font,
+                            anchor="lt")
+                
+                
+                Y_offset += 18
+                font = ImageFont.load_default(8)
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = "Time", # Box title
+                            fill = self.COLOUR_TEXT,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 22
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = formatTime(thisWorkoutParams.totalDuration), # Box title
+                            fill = self.COLOUR_FILL,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 40
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = "Avg. Power:", # Box title
+                            fill = self.COLOUR_TEXT,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 45
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = str(thisWorkoutParams.avgPower) + " W", # Box title
+                            fill = self.COLOUR_FILL,
+                            font = font,
+                            anchor="lm")
+                
+                Y_offset += 13
+                X_offset = X_offset_start
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = "Work:", # Box title
+                            fill = self.COLOUR_TEXT,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 22
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = str(thisWorkoutParams.totalWork) + " kJ", # Box title
+                            fill = self.COLOUR_FILL,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 40
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = "Max Power:", # Box title
+                            fill = self.COLOUR_TEXT,
+                            font = font,
+                            anchor="lm")
+                
+                X_offset += 45
+                draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
+                            text = str(thisWorkoutParams.maxPower) + " W", # Box title
+                            fill = self.COLOUR_FILL,
+                            font = font,
+                            anchor="lm")
+                
+                #### chart
+                Y_offset += 15
+                chartImage = self.drawSegmentsChart(chartWidth=chartWidth,
+                                                    chartHeight=chartHeight,
+                                                    workoutParams=thisWorkoutParams,
+                                                    bgColour=self.COLOUR_BG_LIGHT,
+                                                    segmentsColour=self.COLOUR_FILL)
+                
+                self.im.paste(chartImage, (box_left_top[0]+3, self.Y_POS_START+Y_offset))
+
+                Y_offset = Y_offset_start + box_width_height[1]+18
+
+            X_offset_start += self.WIDTH / 2
+
+
+        self.im.save("selector.png")
     
+    def drawSegmentsChart(self, chartWidth, chartHeight, workoutParams: WorkoutParameters, bgColour, segmentsColour, selectionColour = None, selectedSegment = None) -> Image:
+        image = Image.new('RGB', (chartWidth, chartHeight), bgColour)
+        draw = ImageDraw.Draw(image)
+
+        noSegments = len(workoutParams.segmentsChartData)
+        segment_width_normalisation_factor  = workoutParams.totalDuration / (chartWidth - noSegments * 2)
+        segment_height_normalisation_factor = workoutParams.maxPower / chartHeight 
+
+        barHeightAdjustment: int = 0
+        minBarHeight = int(workoutParams.minPower / segment_height_normalisation_factor) +1
+        if minBarHeight > chartHeight / 5:
+            barHeightAdjustment = minBarHeight - chartHeight / 5
+        
+        maxBarHeight = int(workoutParams.maxPower / segment_height_normalisation_factor) +1 - barHeightAdjustment
+        barHeightScaler = chartHeight / maxBarHeight
+
+        chartXPos = 0
+
+        for counter, segment in enumerate(workoutParams.segmentsChartData):
+
+            if selectedSegment == counter and selectionColour is not None:
+                colour = selectionColour
+            else:
+                colour = segmentsColour
+
+            segment_wh = (int(segment[2] / segment_width_normalisation_factor) + 1,
+                         (int(segment[1] / segment_height_normalisation_factor) +1 - barHeightAdjustment) * barHeightScaler)
+            
+            draw.rectangle(xy=(chartXPos, chartHeight-segment_wh[1], 
+                                chartXPos + segment_wh[0], chartHeight),
+                                fill=colour)
+
+            chartXPos += segment_wh[0]+2
+
+        return image
+
+
+
     def drawPageWorkout(self, workoutType:str, workoutState: str):
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
         
 
-        X_POS_CHARTS: int = 180
+        X_POS_END: int = 180
         LINE_THICKNESS: int = 2
         Y_POS_SECTIONS = self.HEIGHT / 4    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
         
@@ -92,12 +274,6 @@ class ScreenManager:
                       (self.X_POS_START + i * (box_width + self.X_POS_START) + box_width, self.Y_POS_START+box_height))
             
             box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
-
-            #draw.rounded_rectangle(xy = box_xy,
-             #                   radius = 4,
-              #                  fill = self.COLOUR_BG,
-               #                 outline = self.COLOUR_BG,
-                #                width = 3)
             
             font = ImageFont.load_default(10)
             draw.text(xy = (box_centre_xy[0], box_centre_xy[1]-12), 
@@ -208,11 +384,9 @@ class ScreenManager:
                         fill = self.COLOUR_TEXT,
                         font = font,
                         anchor="mm")
-                
-                #chart area will be drawn here
 
                 # calculate spacing accordinly:
-                X_Pos += ((X_POS_CHARTS - self.X_POS_START) - self.X_POS_START) / (len(all_sections) - 1)
+                X_Pos += ((X_POS_END - self.X_POS_START) - self.X_POS_START) / (len(all_sections) - 1)
             
             Y_Pos += section_height
         self.im.save("workout.png")
@@ -261,22 +435,9 @@ data.workoutTime = 20
 lcd = ScreenManager()
 lcd.assignDataContainer(data)
 #lcd.drawPageWorkout("Program", "PROGRAM")
-lcd.drawPageMainMenu()
+#lcd.drawPageMainMenu()
 
-# Define a function to create rotated text.  Unfortunately PIL doesn't have good
-# native support for rotated fonts, but this function can be used to make a
-# text image and rotate it so it's easy to paste in the buffer.
-def draw_rotated_text(image, text, position, angle, font, fill=(255,255,255)):
-    # Get rendered font width and height.
-    draw = ImageDraw.Draw(image)
-    width, height = draw.textsize(text, font=font)
-    # Create a new image with transparent background to store the text.
-    textimage = Image.new('RGBA', (width, height), (0,0,0,0))
-    # Render the text.
-    textdraw = ImageDraw.Draw(textimage)
-    textdraw.text((0,0), text, font=font, fill=fill)
-    # Rotate the text image.
-    rotated = textimage.rotate(angle, expand=1)
-    # Paste the text into the image, using it as a mask for transparency.
-    image.paste(rotated, position, rotated)
 
+workouts = Workouts()
+
+lcd.drawProgrammeSelector(workouts.getListOfWorkoutParametres(0,1))

@@ -19,7 +19,7 @@
     "Segments": [
         {
         "Type": "Power",
-        "Duration": 15,
+        "Duration": 30,
         "Setting": 80
         },
         {

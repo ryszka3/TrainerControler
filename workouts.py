@@ -41,27 +41,52 @@ class Workouts:
     def getWorkout(self, workoutID: int) -> WorkoutProgram:
         return self.listOfWorkout[workoutID]
 
-    def getWorkoutParameters(self, workoutID: int) -> WorkoutParameters:
+    def getListOfWorkoutParametres(self, start:int, stop:int) -> list:
+
+        ret = list()
+        for i in range(start, stop + 1):
+            try:
+                ret.append(self.getSingleWorkoutParameters(i))
+            except:
+                pass
+        return ret
+
+
+    def getSingleWorkoutParameters(self, workoutID: int) -> WorkoutParameters:
         
         totalDuration: int = 0
+        maxPower: int = 0
+        minPower: int = 24*60*60
         averagePower: int = 0
         averageLevel: int = 0
+        totalWork: float = 0
+        segmentChartData = list()
 
         noSegments = 0
 
         segment: WorkoutSegment
         for segment in self.listOfWorkout[workoutID].segments: 
+
             totalDuration += segment.duration
             noSegments += 1
             if segment.segmentType == "Power":
+
                 averagePower += segment.setting
-            elif segment.segmentType     == "Level":
+                maxPower = max(maxPower, segment.setting)
+                minPower = min(minPower, segment.setting)
+                totalWork += segment.setting * segment.duration
+                chartPoint = tuple((noSegments, segment.setting, segment.duration))
+                segmentChartData.append(chartPoint)
+            
+            elif segment.segmentType == "Level":
                 averageLevel += segment.setting
         
+
+        totalWork /= 1000
         averagePower /= noSegments
         averageLevel /= noSegments
 
-        return WorkoutParameters(self.listOfWorkout[workoutID].name, totalDuration, averagePower, averageLevel, noSegments)
+        return WorkoutParameters(self.listOfWorkout[workoutID].name, totalDuration, averagePower, maxPower, totalWork, averageLevel, segmentChartData, minPower)
 
 
 
@@ -101,7 +126,7 @@ class WorkoutManager():
                     if entry.type == "Start":   # Starting a new workout
                         print("Starting programme no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
-                        self.dataContainer.workoutDuration = self.workouts.getWorkoutParameters(entry.data).totalDuration
+                        self.dataContainer.workoutDuration = self.workouts.getSingleWorkoutParameters(entry.data).totalDuration
                         self.state = "WARMUP-PROGRAM"
                     
                     elif entry.type == "Freeride":

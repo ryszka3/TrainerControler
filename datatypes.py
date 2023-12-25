@@ -49,12 +49,15 @@ class WorkoutSegment:
 
 
 class WorkoutParameters:
-     def __init__(self, name, totalDuration, avgPower, avgLevel, noSegments) -> None:
+     def __init__(self, name, totalDuration, avgPower, maxPower, totWork, avgLevel, segChartData, minPow) -> None:
         self.name = name
         self.totalDuration = totalDuration
-        self.avgPower = avgPower, 
-        self.avgLevel = avgLevel,
-        self.noSegments = noSegments
+        self.avgPower = avgPower
+        self.totalWork = totWork
+        self.avgLevel = avgLevel
+        self.segmentsChartData:list = segChartData
+        self.maxPower = maxPower
+        self.minPower = minPow
 
 class QueueEntry:
     def __init__(self, messageType: str, data):
