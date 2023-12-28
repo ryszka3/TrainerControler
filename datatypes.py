@@ -30,23 +30,6 @@ class MinMaxIncrement:
         self.max = 0
         self.increment = 0
 
-class WorkoutProgram:
-    def __init__(self, name: str, segs: list) -> None:
-        self.name: str = name
-        self.segments:list = segs
-
-    def copy(self):
-        return copy.deepcopy(self)
-
-
-class WorkoutSegment:
-    def __init__(self, segType: str, dur: int, set: int) -> None:
-        self.segmentType: str = segType
-        self.duration: int = dur
-        self.setting: int = set
-        self.startTime = 0
-        self.elapsedTime = 0
-
 
 class WorkoutParameters:
      def __init__(self, name, totalDuration, avgPower, maxPower, totWork, avgLevel, segChartData, minPow) -> None:
@@ -58,6 +41,68 @@ class WorkoutParameters:
         self.segmentsChartData:list = segChartData
         self.maxPower = maxPower
         self.minPower = minPow
+
+
+
+class WorkoutProgram:
+    def __init__(self) -> None:
+        self.name: str = None
+        self.segments:list = None
+
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    def getParameters(self) -> WorkoutParameters:
+        
+        totalDuration: int = 0
+        maxPower: int = 0
+        minPower: int = 24*60*60
+        averagePower: int = 0
+        averageLevel: int = 0
+        totalWork: float = 0
+        segmentChartData = list()
+
+        noSegments = 0
+
+        segment: WorkoutSegment
+        if self.segments is not None:
+            for segment in self.segments: 
+
+                totalDuration += segment.duration
+                noSegments += 1
+                if segment.segmentType == "Power":
+
+                    averagePower += segment.setting
+                    maxPower = max(maxPower, segment.setting)
+                    minPower = min(minPower, segment.setting)
+                    totalWork += segment.setting * segment.duration
+                    chartPoint = tuple((noSegments, segment.setting, segment.duration))
+                    segmentChartData.append(chartPoint)
+                
+                elif segment.segmentType == "Level":
+                    averageLevel += segment.setting
+        
+
+        totalWork /= 1000
+        try:
+            averagePower /= noSegments
+            averageLevel /= noSegments
+        except:
+            pass
+
+        return WorkoutParameters(self.name, totalDuration, averagePower, maxPower, totalWork, averageLevel, segmentChartData, minPower)
+
+
+
+
+class WorkoutSegment:
+    def __init__(self, segType: str, dur: int, set: int) -> None:
+        self.segmentType: str = segType
+        self.duration: int = dur
+        self.setting: int = set
+        self.startTime = 0
+        self.elapsedTime = 0
+
 
 class QueueEntry:
     def __init__(self, messageType: str, data):

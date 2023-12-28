@@ -18,7 +18,7 @@ class Workouts:
             raise Exception("Failed opening JSON file")
         
         json_data: list = json.load(json_file)
-        self.listOfWorkout: list = list()
+        self.listOfWorkouts: list = list()
 
         for entry in json_data:
             segments = list()
@@ -27,66 +27,33 @@ class Workouts:
                 thisSegment = WorkoutSegment(seg["Type"], seg["Duration"], seg["Setting"])
                 segments.append(thisSegment)
 
-            workout = WorkoutProgram(entry["Name"], segments)
-            self.listOfWorkout.append(workout)
+            workout = WorkoutProgram()
+            workout.name = entry["Name"]
+            workout.segments = segments
+            self.listOfWorkouts.append(workout)
+
 
     def getWorkoutNames(self):
         ret = list()
         workout: WorkoutProgram
-        for workout in self.listOfWorkout:
+        for workout in self.listOfWorkouts:
             ret.append(workout.name)
         return ret
 
 
     def getWorkout(self, workoutID: int) -> WorkoutProgram:
-        return self.listOfWorkout[workoutID]
+        return self.listOfWorkouts[workoutID]
 
     def getListOfWorkoutParametres(self, start:int, stop:int) -> list:
 
         ret = list()
+
         for i in range(start, stop + 1):
             try:
-                ret.append(self.getSingleWorkoutParameters(i))
+                ret.append(self.listOfWorkouts[i].getParameters())
             except:
                 pass
         return ret
-
-
-    def getSingleWorkoutParameters(self, workoutID: int) -> WorkoutParameters:
-        
-        totalDuration: int = 0
-        maxPower: int = 0
-        minPower: int = 24*60*60
-        averagePower: int = 0
-        averageLevel: int = 0
-        totalWork: float = 0
-        segmentChartData = list()
-
-        noSegments = 0
-
-        segment: WorkoutSegment
-        for segment in self.listOfWorkout[workoutID].segments: 
-
-            totalDuration += segment.duration
-            noSegments += 1
-            if segment.segmentType == "Power":
-
-                averagePower += segment.setting
-                maxPower = max(maxPower, segment.setting)
-                minPower = min(minPower, segment.setting)
-                totalWork += segment.setting * segment.duration
-                chartPoint = tuple((noSegments, segment.setting, segment.duration))
-                segmentChartData.append(chartPoint)
-            
-            elif segment.segmentType == "Level":
-                averageLevel += segment.setting
-        
-
-        totalWork /= 1000
-        averagePower /= noSegments
-        averageLevel /= noSegments
-
-        return WorkoutParameters(self.listOfWorkout[workoutID].name, totalDuration, averagePower, maxPower, totalWork, averageLevel, segmentChartData, minPower)
 
 
 
