@@ -62,7 +62,6 @@ class ScreenManager:
         #self.display.begin()
         #self.display.clear(self.COLOUR_BG)    # Clear to background
 
-        #self.chartsData = [list([0]), list([0]), list([0]), list([0])]
         self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
 
     def assignDataContainer (self, container: DataContainer):
@@ -78,7 +77,7 @@ class ScreenManager:
         if pageID == "UserSelect":
             pass
         if pageID == "Programmes":
-            pass
+            self.drawProgrammeSelector
         if pageID == "WorkoutStart":
            self.drawProgrammeSelector()
 
@@ -90,7 +89,7 @@ class ScreenManager:
 
         self.display.display()
 
-    def drawProgrammeSelector(self, listOfParametres: list):
+    def drawProgrammeSelector(self, listOfParametres: list) -> tuple:
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
@@ -107,6 +106,8 @@ class ScreenManager:
         chartWidth = box_width_height[0]-10
         chartHeight = 30
 
+        touchActiveRegions = tuple()
+
         for i in range(2):
             
             Y_offset = Y_offset_start
@@ -120,15 +121,16 @@ class ScreenManager:
                 
                 X_offset = X_offset_start
 
-                box_left_top = (self.X_POS_START + X_offset, self.Y_POS_START + Y_offset)
-                draw.rounded_rectangle(xy = (box_left_top[0] - 4, box_left_top[1] - 4, 
-                                            box_left_top[0] + box_width_height[0], box_left_top[1] + box_width_height[1]),
+                box_xy = (self.X_POS_START + X_offset - 4, self.Y_POS_START + Y_offset - 4)
+                box_xy += (box_xy[0] + box_width_height[0], box_xy[1] + box_width_height[1])
+
+                draw.rounded_rectangle(xy = (box_xy[0], box_xy[1], box_xy[2], box_xy[3]),
                                         radius = 3,
                                         fill = self.COLOUR_BG_LIGHT,
                                         outline = self.COLOUR_BG_LIGHT,
                                         width = 1)
 
-
+                touchActiveRegions += ((box_xy, progID),)
 
                 font = ImageFont.load_default(12)
                 draw.text(xy = (self.X_POS_START + X_offset, self.Y_POS_START+Y_offset), 
@@ -198,22 +200,24 @@ class ScreenManager:
                 
                 #### chart
                 Y_offset += 15
-                chartImage = self.drawSegmentsChart(chartWidth=chartWidth,
+                chartImage, chartActiveRegions = self.drawSegmentsChart(chartWidth=chartWidth,
                                                     chartHeight=chartHeight,
                                                     workoutParams=thisWorkoutParams,
                                                     bgColour=self.COLOUR_BG_LIGHT,
                                                     segmentsColour=self.COLOUR_FILL)
                 
-                self.im.paste(chartImage, (box_left_top[0]+3, self.Y_POS_START+Y_offset))
+                self.im.paste(chartImage, (box_xy[0]+7, self.Y_POS_START+Y_offset))
 
                 Y_offset = Y_offset_start + box_width_height[1]+18
 
             X_offset_start += self.WIDTH / 2
 
-
         self.im.save("selector.png")
+        return touchActiveRegions
     
-    def drawSegmentsChart(self, chartWidth, chartHeight, workoutParams: WorkoutParameters, bgColour, segmentsColour, selectionColour = None, selectedSegment = None) -> Image:
+
+    
+    def drawSegmentsChart(self, chartWidth: int, chartHeight: int, workoutParams: WorkoutParameters, bgColour: tuple, segmentsColour: tuple, selectionColour = None, selectedSegment = None) -> tuple:
         image = Image.new('RGB', (chartWidth, chartHeight), bgColour)
         draw = ImageDraw.Draw(image)
 
@@ -231,6 +235,8 @@ class ScreenManager:
 
         chartXPos = 0
 
+        touchActiveRegions = tuple()
+
         for counter, segment in enumerate(workoutParams.segmentsChartData):
 
             if selectedSegment == counter and selectionColour is not None:
@@ -241,26 +247,27 @@ class ScreenManager:
             segment_wh = (int(segment[2] / segment_width_normalisation_factor) + 1,
                          (int(segment[1] / segment_height_normalisation_factor) +1 - barHeightAdjustment) * barHeightScaler)
             
-            draw.rectangle(xy=(chartXPos, chartHeight-segment_wh[1], 
-                                chartXPos + segment_wh[0], chartHeight),
-                                fill=colour)
+            segment_xy = (chartXPos, chartHeight-segment_wh[1], chartXPos + segment_wh[0], chartHeight)
+            
+            draw.rectangle(xy=segment_xy, fill=colour)
+            touchActiveRegions += ((segment_xy, counter),)
 
             chartXPos += segment_wh[0]+2
 
-        return image
+        return (image, touchActiveRegions)
 
 
 
-    def drawPageWorkout(self, workoutType:str, workoutState: str):
+    def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
-        
+        touchActiveRegions = tuple()
 
         X_POS_END: int = 180
         LINE_THICKNESS: int = 2
         Y_POS_SECTIONS = self.HEIGHT / 4    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
-        
+
         noBoxes = 3
         box_width = (self.WIDTH - self.X_POS_START * (noBoxes+1))/noBoxes
         box_height = 45
@@ -285,15 +292,18 @@ class ScreenManager:
             if i == 1:  # central box, 
                 
                 start_stop_button_dims = (65, 20)
-                start_stop_button_xy = (((self.WIDTH - start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS - start_stop_button_dims[1]) / 2 + 8),
-                                        ((self.WIDTH + start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS + start_stop_button_dims[1]) / 2 + 8)
-                                        )
+                start_stop_button_xy = ((self.WIDTH - start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS - start_stop_button_dims[1]) / 2 + 8,
+                                        (self.WIDTH + start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS + start_stop_button_dims[1]) / 2 + 8)
+                                        
                
                 draw.rounded_rectangle(xy = start_stop_button_xy,
                                 radius = 3,
                                 fill = self.COLOUR_BUTTON,
                                 outline = self.COLOUR_BUTTON,
                                 width = 2)
+                
+                touchActiveRegions += ((start_stop_button_xy, "button"),)
+
 
                 if workoutState == "FREERIDE" or workoutState == "PROGRAM":
                     button_label = "Pause / End"
@@ -390,12 +400,14 @@ class ScreenManager:
             
             Y_Pos += section_height
         self.im.save("workout.png")
+        return touchActiveRegions
             
 
-    def drawPageMainMenu(self):
+    def drawPageMainMenu(self) -> tuple:
         #self.display.clear()
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
+        touchActiveRegions = tuple()
 
         noBoxes = (3, 2)    # in x and y
         box_width  = (self.WIDTH - self.X_POS_START * (noBoxes[0]+1))/noBoxes[0]
@@ -415,6 +427,8 @@ class ScreenManager:
                                     outline = self.COLOUR_OUTLINE,
                                     width = 3)
                 
+                touchActiveRegions += ((box_xy, box_Labels[i][j]),)
+                
                 font = ImageFont.load_default(12)
                 box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
                 draw.text(xy = box_centre_xy, 
@@ -425,6 +439,7 @@ class ScreenManager:
                     anchor="mm")
                 
         self.im.save("mainMenu.png")
+        return touchActiveRegions
 
 data = DataContainer()
 data.currentSegment = WorkoutSegment("power", 24, 110)
