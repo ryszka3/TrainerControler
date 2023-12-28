@@ -123,7 +123,7 @@ class ScreenManager:
         
         font = ImageFont.load_default(10)
         for i, label in enumerate(button_label):
-            button_xy = (X_Pos, Y_Pos + i * 30)
+            button_xy = (X_Pos, Y_Pos)
             button_xy += (button_xy[0] + button_dims[0], button_xy[1] + button_dims[1])
             button_centre = (button_xy[0] + button_dims[0] / 2, button_xy[1] + button_dims[1] / 2)
             
@@ -140,7 +140,27 @@ class ScreenManager:
                                 anchor="mm")
             
             touchActiveRegions += ((button_xy, label),)
+            Y_Pos += i * 30
 
+
+        
+        paramsLabels = ("Name:", "Duration:", "Avg Power:", "Work:")
+        paramsUnits = ("", "s", "W", "kJ")
+        paramsXoffsets = (0, 40,40,40)
+        paramsFontSize = (8, 10,10,10)
+
+        for label, unit, Xoffset, size, value, in zip(paramsLabels, paramsUnits, paramsXoffsets, paramsFontSize, programme.getParameters()):
+            
+            font = ImageFont.load_default(8)
+            draw.text(xy=(X_Pos, Y_Pos), text=label, fill=self.COLOUR_TEXT_LIGHT, font=font)
+            Y_Pos += 13
+
+            font = ImageFont.load_default(size)
+            draw.text(xy=(X_Pos + Xoffset, Y_Pos), text=str(value)+unit, fill=self.COLOUR_OUTLINE, font=font)
+            Y_Pos += 13
+
+
+        font = ImageFont.load_default(10)
         button_label = tuple()
         if selected_segment is None:
             button_label += ("Add",)
@@ -171,7 +191,6 @@ class ScreenManager:
             touchActiveRegions += ((button_xy, label),)
 
         ## central edit box
-        font = ImageFont.load_default(8)
         font = ImageFont.load_default(10)
 
         box_wd = (140, 110)
@@ -212,8 +231,6 @@ class ScreenManager:
 
             X_Pos += 35
 
-
-        
         X_Pos -= 130
         Y_Pos += 20
         draw.text(xy=(X_Pos, Y_Pos+5), text="Setting: ", anchor="lt", fill=self.COLOUR_TEXT_LIGHT, font=font)

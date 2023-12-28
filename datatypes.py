@@ -5,6 +5,7 @@ from collections import namedtuple
 
 
 User = namedtuple("User", ["Name", "Max_HR", "FTP"])
+WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
 
 class UserList:
     def __init__(self) -> None:
@@ -31,16 +32,16 @@ class MinMaxIncrement:
         self.increment = 0
 
 
-class WorkoutParameters:
-     def __init__(self, name, totalDuration, avgPower, maxPower, totWork, avgLevel, segChartData, minPow) -> None:
-        self.name = name
-        self.totalDuration = totalDuration
-        self.avgPower = avgPower
-        self.totalWork = totWork
-        self.avgLevel = avgLevel
-        self.segmentsChartData:list = segChartData
-        self.maxPower = maxPower
-        self.minPower = minPow
+#class WorkoutParameters:
+ #    def __init__(self, name, totalDuration, avgPower, maxPower, totWork, avgLevel, segChartData, minPow) -> None:
+  #      self.name = name
+   #     self.totalDuration = totalDuration
+    #    self.avgPower = avgPower
+     #   self.totalWork = totWork
+      #  self.avgLevel = avgLevel
+       # self.segmentsChartData:list = segChartData
+        #self.maxPower = maxPower
+        #self.minPower = minPow
 
 
 
@@ -90,7 +91,7 @@ class WorkoutProgram:
         except:
             pass
 
-        return WorkoutParameters(self.name, totalDuration, averagePower, maxPower, totalWork, averageLevel, segmentChartData, minPower)
+        return WorkoutParameters(self.name, totalDuration, averagePower, totalWork, maxPower, averageLevel, segmentChartData, minPower)
 
 
 
