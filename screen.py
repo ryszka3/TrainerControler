@@ -495,6 +495,7 @@ class ScreenManager:
             box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
             
             font = ImageFont.load_default(10)
+            
             draw.text(xy = (box_centre_xy[0], box_centre_xy[1]-12), 
                     text = box_Labels[i][0], # Box title
                     fill = self.COLOUR_TEXT_LIGHT,
@@ -503,31 +504,34 @@ class ScreenManager:
             
             if i == 1:  # central box, 
                 
-                start_stop_button_dims = (65, 20)
-                start_stop_button_xy = ((self.WIDTH - start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS - start_stop_button_dims[1]) / 2 + 8,
-                                        (self.WIDTH + start_stop_button_dims[0]) / 2, (Y_POS_SECTIONS + start_stop_button_dims[1]) / 2 + 8)
-                                        
-               
-                draw.rounded_rectangle(xy = start_stop_button_xy,
-                                radius = 3,
-                                fill = self.COLOUR_BUTTON,
-                                outline = self.COLOUR_BUTTON,
-                                width = 2)
-                
-                touchActiveRegions += ((start_stop_button_xy, "button"),)
-
-
                 if workoutState == "FREERIDE" or workoutState == "PROGRAM":
-                    button_label = "Pause / End"
+                    button_label = "Pause"
                 else:
                     button_label = "Resume" 
+                
+                button_dims = (38, 20)
+                button_x_separation = 14
+                
+                button_xy = ((self.WIDTH / 2 - button_dims[0] - button_x_separation/2), (Y_POS_SECTIONS - button_dims[1]) / 2 + 8,
+                             (self.WIDTH / 2 - button_x_separation/2), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
+                                        
+                button_centre = ((button_xy[2] + button_xy[0])/2, (button_xy[3] + button_xy[1])/2)
+                draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON, 
+                                       outline = self.COLOUR_BUTTON, width = 2)
+                draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
+                touchActiveRegions += ((button_xy, "Pause"),)
 
-                font = ImageFont.load_default(10)
-                draw.text(xy = (self.WIDTH / 2, Y_POS_SECTIONS / 2 + 8), 
-                    text = button_label,
-                    fill = self.COLOUR_TEXT_LIGHT,
-                    font = font,
-                    anchor="mm")
+
+                button_xy = ((self.WIDTH / 2 + button_x_separation/2), (Y_POS_SECTIONS - button_dims[1]) / 2 + 8,
+                             (self.WIDTH / 2 + button_x_separation/2 + button_dims[0]), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
+                
+                button_centre = ((button_xy[2] + button_xy[0])/2, (button_xy[3] + button_xy[1])/2)
+
+                draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON,
+                                        outline = self.COLOUR_BUTTON, width = 2)
+                
+                touchActiveRegions += ((button_xy, "End"),)
+                draw.text(xy = button_centre, text = "End", fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
 
                 # no extra info to print, skip the rest of the iteration
                 continue
@@ -670,8 +674,8 @@ data.workoutTime = 20
 
 lcd = ScreenManager()
 lcd.assignDataContainer(data)
-#lcd.drawPageWorkout("Program", "PROGRAM")
-lcd.drawPageMainMenu()
+lcd.drawPageWorkout("Program", "PROGRAM")
+#lcd.drawPageMainMenu()
 
 
 workouts = Workouts()

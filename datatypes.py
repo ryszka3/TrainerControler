@@ -7,6 +7,15 @@ from collections import namedtuple
 User = namedtuple("User", ["Name", "Max_HR", "FTP"])
 WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
 
+
+
+class MinMaxIncrement:
+    def __init__(self) -> None:
+        self.min = 0
+        self.max = 0
+        self.increment = 0
+
+        
 class UserList:
     def __init__(self) -> None:
         
@@ -25,11 +34,6 @@ class UserList:
 
 
 
-class MinMaxIncrement:
-    def __init__(self) -> None:
-        self.min = 0
-        self.max = 0
-        self.increment = 0
 
 
 #class WorkoutParameters:

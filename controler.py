@@ -3,7 +3,7 @@ import configparser
 import queue
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
-from   datatypes   import DataContainer, UserList
+from   datatypes   import DataContainer, UserList, QueueEntry
 from   screen      import ScreenManager, TouchScreen
 
 
@@ -67,7 +67,20 @@ class Supervisor:
         dataAndFlagContainer.programmeRunningFlag = False
         print("Supervisor Closed")
 
+    def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
+        
+        x_touch, y_touch = touchPoint
+        x1_box, y1_box, x2_box, y2_box = boundaryBox
+
+        if x_touch >= x1_box and x_touch <= x2_box:
+            if y_touch >= y1_box and y_touch <= y2_box:
+                return True
+            
+        return False
+
+
     async def loopy(self):
+
         dataAndFlagContainer.assignUser(userList.listOfUsers[0])
         lcd.assignDataContainer(dataAndFlagContainer)
         
@@ -77,45 +90,85 @@ class Supervisor:
                     print("state: Main menu")
                     touchActiveRegions = lcd.drawPageMainMenu()
                     while self.state == "MainMenu":
+                        lcd.drawPageMainMenu()
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
                             for region in touchActiveRegions:
-                                if location[0] >= region[0][0] and location[1] >= region[0][1] and location[3] <= region[0][3] and location[4] <= region[0][4]:
+                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                     self.oldState = self.state
-                                    self.state = region[1]
+                                    self.state = value
+                        asyncio.sleep(0.1)
 
                 case "RideProgramme":
-                    print("state: Ride a Programme")
+
                     if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
                         self.oldState = "RideProgramme"
                         self.state = "ProgSelect"
                         break
                     else:
+                        if device_heartRateSensor.connectionState == True:
+                            device_heartRateSensor.subscribeToService()
+                        if device_turboTrainer.connectionState == True:
+                            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
                         #### if coming from prog select then start the workout
-                        pass
+                        touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+                        workoutManager.startWorkout(self.selectedProgramme)
+                        await asyncio.sleep(2)
+                        while workoutManager.state != "IDLE":
+                            touch, location = touchScreen.checkTouch()
+                            if touch == True:
+                                for region in touchActiveRegions:
+                                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                        
+                                        if value == "End":
+                                            workoutManager.queue.put(QueueEntry("Stop", 0))
+
+                                        elif workoutManager.state == "PROGRAM":
+                                            workoutManager.queue.put(QueueEntry("Pause", 0))
+
+                                        else:
+                                            workoutManager.queue.put(QueueEntry("Start", 0))
+
+                            lcd.drawPageWorkout("Program", workoutManager.state)
+                            asyncio.sleep(0.1)
+                        
 
                 case "ProgEdit":
-                    print("state: Programme editor")
+
                     if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
                         self.oldState = "ProgEdit"
                         self.state = "ProgSelect"
                         break
                     else:
                         #### if coming from prog select then start the workout
+                        #self.selectedProgramme
                         pass
+                
+                
                 case "ProgSelect":
-                    print("state: Programme selector")
-                    ##select a programme
 
-                    ## then go back to the correct state
-                    self.state = self.oldState
-                    self.oldState = "ProgEdit"
+                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(0,3)
+                    touchActiveRegions = lcd.drawProgrammeSelector(workoutParametres)
+
+                    while self.state == "ProgSelect":
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            for region in touchActiveRegions:
+                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                    self.selectedProgramme = value
+                                    ## then go back to the correct state
+                                    self.state = self.oldState
+                                    self.oldState = "ProgSelect"
+                                    break
+                        asyncio.sleep(0.1)
 
                 case "Settings":
                     print("state: Programme selector")
         
-
-
 
     
 supervisor = Supervisor()
