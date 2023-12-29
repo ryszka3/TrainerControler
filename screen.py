@@ -29,6 +29,14 @@ def formatTime(dur: int) -> str:
     return ret
 
 
+class TouchScreen:
+
+    def checkTouch() -> tuple:
+
+        return (False, (0,0,0,0))
+
+
+
 class ScreenManager:
     
     dataContainer = DataContainer()
@@ -278,9 +286,6 @@ class ScreenManager:
                 Y_Pos += 16
                 X_Pos -= 3*26
 
-
-        for reg in touchActiveRegions:
-            print(reg)
         self.im.save("progEditor.png")
         return touchActiveRegions
     
@@ -617,33 +622,42 @@ class ScreenManager:
         touchActiveRegions = tuple()
 
         noBoxes = (3, 2)    # in x and y
-        box_width  = (self.WIDTH - self.MARGIN_LARGE * (noBoxes[0]+1))/noBoxes[0]
-        box_height = box_width  *0.8 
-        box_Labels = (("Change\nUser", "History", "Settings"), ("Edit\nProgrammes","Ride\na\nProgramme", "Freeride"))
+        box_width  = int((self.WIDTH - self.MARGIN_LARGE * (noBoxes[0]+1))/noBoxes[0])
+        box_height = int(box_width  * 0.8)
+        box_labels = ("Change\nUser", "History", "Settings", "Edit\nProgrammes","Ride\na\nProgramme", "Freeride")
 
-        for i in range(noBoxes[1]):
-            for j in range(noBoxes[0]):
-                box_xy = ((self.MARGIN_LARGE + j * (box_width + self.MARGIN_LARGE), 
-                           self.MARGIN_SMALL + i * (box_height + self.MARGIN_SMALL+30)+25), 
-                          (self.MARGIN_LARGE + j * (box_width + self.MARGIN_LARGE) + box_width, 
-                           self.MARGIN_SMALL + i * (box_height + self.MARGIN_SMALL+30) + box_height+25))
+        stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgramme", "Freeride", "ProgSelect")
+        X_Pos = self.MARGIN_LARGE
+        Y_Pos = self.MARGIN_LARGE+25
 
-                draw.rounded_rectangle(xy = box_xy,
-                                    radius = 4,
-                                    fill = self.COLOUR_BG,
-                                    outline = self.COLOUR_OUTLINE,
-                                    width = 3)
-                
-                touchActiveRegions += ((box_xy, box_Labels[i][j]),)
-                
-                font = ImageFont.load_default(12)
-                box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
-                draw.text(xy = box_centre_xy, 
-                    text = box_Labels[i][j], # Box title
-                    fill = self.COLOUR_TEXT_LIGHT,
-                    font = font,
-                    align="center",
-                    anchor="mm")
+        for i, zipped in enumerate(zip(box_labels, stateMachineStates)):
+            
+            label, state = zipped
+
+            box_xy = (X_Pos, Y_Pos, X_Pos + box_width, Y_Pos + box_height)
+
+            draw.rounded_rectangle(xy = box_xy,
+                                radius = 4,
+                                fill = self.COLOUR_BG,
+                                outline = self.COLOUR_OUTLINE,
+                                width = 3)
+            
+            touchActiveRegions += ((box_xy, state),)
+            
+            font = ImageFont.load_default(12)
+            box_centre_xy = (box_xy[0] + box_width / 2, box_xy[1] + box_height / 2)
+            draw.text(xy = box_centre_xy, 
+                text = label, # Box title
+                fill = self.COLOUR_TEXT_LIGHT,
+                font = font,
+                align="center",
+                anchor="mm")
+            
+            X_Pos += box_width + 12
+
+            if i + 1 == noBoxes[0]:
+                X_Pos = self.MARGIN_LARGE
+                Y_Pos += box_height + 25
                 
         self.im.save("mainMenu.png")
         return touchActiveRegions
@@ -657,7 +671,7 @@ data.workoutTime = 20
 lcd = ScreenManager()
 lcd.assignDataContainer(data)
 #lcd.drawPageWorkout("Program", "PROGRAM")
-#lcd.drawPageMainMenu()
+lcd.drawPageMainMenu()
 
 
 workouts = Workouts()
@@ -665,4 +679,4 @@ workouts = Workouts()
 seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
 #lcd.drawProgrammeSelector(workouts.getListOfWorkoutParametres(0,1))
-lcd.drawProgrammeEditor(workouts.getWorkout(1),1,editedSegment=seg)
+#lcd.drawProgrammeEditor(workouts.getWorkout(1),1,editedSegment=seg)

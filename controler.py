@@ -4,6 +4,7 @@ import queue
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList
+from   screen      import ScreenManager, TouchScreen
 
 
 userList               = UserList()
@@ -11,7 +12,8 @@ dataAndFlagContainer   = DataContainer()
 device_heartRateSensor = HeartRateMonitor()
 device_turboTrainer    = FitnessMachine()
 workoutManager         = WorkoutManager()
-
+lcd                    = ScreenManager()
+touchScreen            = TouchScreen()
 
 #####    Reading configuration file    ####
 
@@ -45,6 +47,8 @@ if "TurboTrainer" in config:
 class Supervisor:
     def __init__(self) -> None:
         self.queue = queue.SimpleQueue()
+        self.state: str = "MainMenu"
+        self.oldState: str = "MainMenu"
 
     async def loop(self):
         dataAndFlagContainer.assignUser(userList.listOfUsers[0])
@@ -62,6 +66,57 @@ class Supervisor:
             await asyncio.sleep(1) 
         dataAndFlagContainer.programmeRunningFlag = False
         print("Supervisor Closed")
+
+    async def loopy(self):
+        dataAndFlagContainer.assignUser(userList.listOfUsers[0])
+        lcd.assignDataContainer(dataAndFlagContainer)
+        
+        while True:     #### Main loop
+            match self.state:
+                case "MainMenu":
+                    print("state: Main menu")
+                    touchActiveRegions = lcd.drawPageMainMenu()
+                    while self.state == "MainMenu":
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            for region in touchActiveRegions:
+                                if location[0] >= region[0][0] and location[1] >= region[0][1] and location[3] <= region[0][3] and location[4] <= region[0][4]:
+                                    self.oldState = self.state
+                                    self.state = region[1]
+
+                case "RideProgramme":
+                    print("state: Ride a Programme")
+                    if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
+                        self.oldState = "RideProgramme"
+                        self.state = "ProgSelect"
+                        break
+                    else:
+                        #### if coming from prog select then start the workout
+                        pass
+
+                case "ProgEdit":
+                    print("state: Programme editor")
+                    if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
+                        self.oldState = "ProgEdit"
+                        self.state = "ProgSelect"
+                        break
+                    else:
+                        #### if coming from prog select then start the workout
+                        pass
+                case "ProgSelect":
+                    print("state: Programme selector")
+                    ##select a programme
+
+                    ## then go back to the correct state
+                    self.state = self.oldState
+                    self.oldState = "ProgEdit"
+
+                case "Settings":
+                    print("state: Programme selector")
+        
+
+
+
     
 supervisor = Supervisor()
 
