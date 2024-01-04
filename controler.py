@@ -89,8 +89,20 @@ class Supervisor:
                 case "MainMenu":
                     print("state: Main menu")
                     touchActiveRegions = lcd.drawPageMainMenu()
+                    loopCounter: int = 0
+                    MAX_COUNT = 14
                     while self.state == "MainMenu":
-                        lcd.drawPageMainMenu()
+                        
+                        heartFillColour = lcd.COLOUR_HEART
+                        if device_heartRateSensor.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
+                            heartFillColour = lcd.COLOUR_BG_LIGHT
+                            device_heartRateSensor.connect = True  ## Maintain this flag true to continue to try to connect   
+
+                        TTFillColour = lcd.COLOUR_TT
+                        if device_turboTrainer.connectionState == False and loopCounter < MAX_COUNT / 2 - 1:
+                            TTFillColour = lcd.COLOUR_BG_LIGHT
+                            device_turboTrainer.connect = True  ## Maintain this flag true to continue to try to connect  
+
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
                             for region in touchActiveRegions:
@@ -98,10 +110,16 @@ class Supervisor:
                                 if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                     self.oldState = self.state
                                     self.state = value
+                        
                         if self.state == "RideProgramme" or self.state == "Freeride" and device_turboTrainer.connectionState == False:
                             #### no TT connection, display error message, cancel state change
+                            lcd.drawConnectionErrorMessage()
                             self.state == "MainMenu"
+                            asyncio.sleep(4.0)
+                        else:
+                            lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                         
+                        loopCounter = (loopCounter + 1) % MAX_COUNT
                         asyncio.sleep(0.1)
 
                 case "RideProgramme":

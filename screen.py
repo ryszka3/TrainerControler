@@ -60,14 +60,16 @@ class ScreenManager:
         self.COLOUR_FILL:       tuple = (139, 175, 255)
         self.COLOUR_OUTLINE:    tuple = (208, 220, 170)
         self.COLOUR_TEXT_LIGHT: tuple = (156, 223, 250)
-        self.COLOUR_TEXT_DARK:  tuple = (30, 50, 60)
+        self.COLOUR_TEXT_DARK:  tuple = (30,   50,  60)
         self.COLOUR_BUTTON:     tuple = (200,  60, 100)
+        self.COLOUR_HEART:      tuple = (207,  17,  17)
+        self.COLOUR_TT:         tuple = (207,  17,  17)
 
         #self.display = TFT.ILI9341(dc     = PIN_DC, 
-        #                           rst    = PIN_RST, 
-         #                          spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
-          #                         width  = self.WIDTH, 
-           #                        height = self.HEIGHT)
+         #                          rst    = PIN_RST, 
+          #                         spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
+           #                        width  = self.WIDTH, 
+            #                       height = self.HEIGHT)
         #self.display.begin()
         #self.display.clear(self.COLOUR_BG)    # Clear to background
 
@@ -619,7 +621,7 @@ class ScreenManager:
         return touchActiveRegions
             
 
-    def drawPageMainMenu(self) -> tuple:
+    def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
         #self.display.clear()
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
@@ -631,31 +633,30 @@ class ScreenManager:
         box_labels = ("Change\nUser", "History", "Settings", "Edit\nProgrammes","Ride\na\nProgramme", "Freeride")
 
         stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgramme", "Freeride", "ProgSelect")
-        X_Pos = self.MARGIN_LARGE
-        Y_Pos = self.MARGIN_LARGE+25
+        
+        Y_Pos = self.MARGIN_LARGE
+        X_Pos = int((self.WIDTH - 4 * self.MARGIN_LARGE) / 3)
+        HEART_HEIGHT = 21
+        heartImage = self.drawHeart(HEART_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
 
+        #self.display.buffer
+        self.im.paste(heartImage, (X_Pos, Y_Pos))
+
+        Y_Pos = HEART_HEIGHT + 3 * self.MARGIN_LARGE
+        X_Pos = self.MARGIN_LARGE
         for i, zipped in enumerate(zip(box_labels, stateMachineStates)):
             
             label, state = zipped
 
             box_xy = (X_Pos, Y_Pos, X_Pos + box_width, Y_Pos + box_height)
 
-            draw.rounded_rectangle(xy = box_xy,
-                                radius = 4,
-                                fill = self.COLOUR_BG,
-                                outline = self.COLOUR_OUTLINE,
-                                width = 3)
+            draw.rounded_rectangle(xy = box_xy, radius = 4, fill = self.COLOUR_BG_LIGHT, outline = self.COLOUR_OUTLINE, width = 3)
             
             touchActiveRegions += ((box_xy, state),)
             
             font = ImageFont.load_default(12)
             box_centre_xy = (box_xy[0] + box_width / 2, box_xy[1] + box_height / 2)
-            draw.text(xy = box_centre_xy, 
-                text = label, # Box title
-                fill = self.COLOUR_TEXT_LIGHT,
-                font = font,
-                align="center",
-                anchor="mm")
+            draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_LIGHT, font = font, align="center", anchor="mm")
             
             X_Pos += box_width + 12
 
@@ -666,7 +667,26 @@ class ScreenManager:
         self.im.save("mainMenu.png")
         return touchActiveRegions
 
-    def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple):
+
+    def drawConnectionErrorMessage(self):
+        WIDTH = 150
+        HEIGHT = 68
+        
+        image = Image.new('RGB', (WIDTH, HEIGHT), self.COLOUR_BG_LIGHT)
+        draw = ImageDraw.Draw(image)
+
+        draw.rectangle(xy=(0,0, WIDTH-1, HEIGHT-1), outline=self.COLOUR_OUTLINE, fill=self.COLOUR_BG_LIGHT, width=2)
+
+        font = ImageFont.load_default(12)
+        draw.text(xy=(WIDTH/2, 10), text="Trainer Not Connected!", anchor="mt", font=font)
+        font = ImageFont.load_default(9)
+        draw.text(xy=(WIDTH/2, 47), text="Power up  or  start  pedalling\nto  wake up  the  trainer", anchor="mm", font=font, align="center")
+
+        #self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
+        #self.display.display()
+
+
+    def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
 
         if height % 2 == 1:
             height = int(height/2)*2 + 1 ## make sure height is odd
@@ -680,7 +700,7 @@ class ScreenManager:
         Y_pos_offset = -1
         Y_pos = height + Y_pos_offset
         X_pos = int(width / 2) + 1 + X_pos_offset
-        print("W: ", width, " H: ", height, " Xc:", X_pos)
+
         for lineLength in range(0, width-1, 2):
             start = (X_pos, Y_pos)
             end = (X_pos + lineLength, Y_pos)
@@ -733,7 +753,8 @@ class ScreenManager:
             Y_pos -= 1
             X_pos -= 1
 
-        image.save("heart.png")
+        #image.save("heart.png")
+        return image
 
 
 
@@ -752,8 +773,9 @@ if __name__ == "__main__":
     lcd = ScreenManager()
     lcd.assignDataContainer(data)
     #lcd.drawPageWorkout("Program", "PROGRAM")
-    #lcd.drawPageMainMenu()
-    lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
+    lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+    #lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
+    #lcd.drawConnectionErrorMessage()
 
     workouts = Workouts()
 
