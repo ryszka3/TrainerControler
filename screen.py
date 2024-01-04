@@ -666,21 +666,98 @@ class ScreenManager:
         self.im.save("mainMenu.png")
         return touchActiveRegions
 
-data = DataContainer()
-data.currentSegment = WorkoutSegment("power", 24, 110)
-data.currentSegment.elapsedTime = 5
-data.workoutDuration = 60
-data.workoutTime = 20
+    def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple):
 
-lcd = ScreenManager()
-lcd.assignDataContainer(data)
-lcd.drawPageWorkout("Program", "PROGRAM")
-#lcd.drawPageMainMenu()
+        if height % 2 == 1:
+            height = int(height/2)*2 + 1 ## make sure height is odd
+        WH_RATIO = 13/11
+        width = int(height * WH_RATIO / 2) * 2 + 1
+
+        image = Image.new('RGB', (width, height), colour_bg)
+        draw = ImageDraw.Draw(image)
+
+        X_pos_offset = -1
+        Y_pos_offset = -1
+        Y_pos = height + Y_pos_offset
+        X_pos = int(width / 2) + 1 + X_pos_offset
+        print("W: ", width, " H: ", height, " Xc:", X_pos)
+        for lineLength in range(0, width-1, 2):
+            start = (X_pos, Y_pos)
+            end = (X_pos + lineLength, Y_pos)
+            
+            draw.line((start, end), colour_fill)
+            draw.point(start, colour_outline) ## black outline
+            draw.point(end, colour_outline)
+            Y_pos -= 1
+            X_pos -= 1
+        
+        X_pos += 1
+        FLATRATIO = 4/13
+        flatHeight = int(FLATRATIO * height)
+
+        for i in range(flatHeight):
+            start = (X_pos, Y_pos)
+            end = (X_pos + lineLength, Y_pos)
+
+            draw.line((start, end), colour_fill)
+            draw.point(start, colour_outline) ## black outline
+            draw.point(end, colour_outline)
+            Y_pos -= 1
+
+        TOP_RATIO = 2/13
+        topSteps = int(TOP_RATIO * height) + 1 
+        
+        for lineLength in range(lineLength, lineLength - topSteps, -2):
+            start = (X_pos+1, Y_pos)
+            end = (X_pos + lineLength-1, Y_pos)
+            
+            draw.line((start, end), colour_fill)
+            draw.point(start, colour_outline) ## black outline
+            draw.point(end, colour_outline)
+            Y_pos -= 1
+            X_pos += 1
+
+        Y_pos += 1
+        draw.line((start, end), colour_outline)
+        
+        Y_pos += topSteps-1
+        X_pos = int(width / 2) + 1 + X_pos_offset
+
+        for lineLength in range(0, topSteps*2, 2):
+            start = (X_pos, Y_pos)
+            end = (X_pos + lineLength, Y_pos)
+
+            draw.line((start, end), colour_bg)
+            draw.point(start, colour_outline) ## black outline
+            draw.point(end, colour_outline)
+            Y_pos -= 1
+            X_pos -= 1
+
+        image.save("heart.png")
 
 
-workouts = Workouts()
 
-seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
-#lcd.drawProgrammeSelector(workouts.getListOfWorkoutParametres(0,1))
-#lcd.drawProgrammeEditor(workouts.getWorkout(1),1,editedSegment=seg)
+
+#### Run this bit of code when debugging:
+
+if __name__ == "__main__":
+    
+    data = DataContainer()
+    data.currentSegment = WorkoutSegment("power", 24, 110)
+    data.currentSegment.elapsedTime = 5
+    data.workoutDuration = 60
+    data.workoutTime = 20
+
+    lcd = ScreenManager()
+    lcd.assignDataContainer(data)
+    #lcd.drawPageWorkout("Program", "PROGRAM")
+    #lcd.drawPageMainMenu()
+    lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
+
+    workouts = Workouts()
+
+    seg = WorkoutSegment(segType="Power", dur=185, set="180")
+
+    #lcd.drawProgrammeSelector(workouts.getListOfWorkoutParametres(0,1))
+    #lcd.drawProgrammeEditor(workouts.getWorkout(1),1,editedSegment=seg)

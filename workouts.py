@@ -44,8 +44,9 @@ class Workouts:
     def getWorkout(self, workoutID: int) -> WorkoutProgram:
         return self.listOfWorkouts[workoutID]
 
-    def getListOfWorkoutParametres(self, start:int, stop:int) -> list:
+    def getListOfWorkoutParametres(self, rangeToGet: tuple ) -> list:
 
+        start, stop = rangeToGet
         ret = list()
 
         for i in range(start, stop + 1):
@@ -67,6 +68,9 @@ class WorkoutManager():
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
         self.dataContainer: DataContainer = None
+
+    def numberOfWorkoutProgrammes(self) -> int:
+        return len(self.workouts.listOfWorkouts)
 
     def startWorkout(self, workoutID):
         self.queue.put(QueueEntry("Start", workoutID))
@@ -162,7 +166,7 @@ class WorkoutManager():
             if self.state == "PROGRAM" or self.state == "FREERIDE":
                 
                 if not entry == None: 
-                    if entry.type == "Stop":   # Stop the workout, go to STOP to close the datafile
+                    if entry.type == "End":   # Stop the workout, go to STOP to close the datafile
                         self.state = "STOP"
                     
                     elif entry.type == "Pause": # Pause the workout, go to PAUSE and await futher instructions

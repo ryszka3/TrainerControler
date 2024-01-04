@@ -98,6 +98,10 @@ class Supervisor:
                                 if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                     self.oldState = self.state
                                     self.state = value
+                        if self.state == "RideProgramme" or self.state == "Freeride" and device_turboTrainer.connectionState == False:
+                            #### no TT connection, display error message, cancel state change
+                            self.state == "MainMenu"
+                        
                         asyncio.sleep(0.1)
 
                 case "RideProgramme":
@@ -123,9 +127,15 @@ class Supervisor:
                                     if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                         
                                         if value == "End":
-                                            workoutManager.queue.put(QueueEntry("Stop", 0))
+                                            ## do end of programme routines
+                                            workoutManager.queue.put(QueueEntry("End", 0))
+                                            device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
 
-                                        elif workoutManager.state == "PROGRAM":
+                                            ## then go to the main menu
+                                            self.state = "MainMenu"
+                                            break
+
+                                        elif workoutManager.state == "PROGRAM" or workoutManager.state == "FREERIDE":
                                             workoutManager.queue.put(QueueEntry("Pause", 0))
 
                                         else:
@@ -142,14 +152,18 @@ class Supervisor:
                         self.state = "ProgSelect"
                         break
                     else:
-                        #### if coming from prog select then start the workout
-                        #self.selectedProgramme
+                        #### if coming from prog select then start the editor
+                        
                         pass
                 
                 
                 case "ProgSelect":
+                    
+                    numberOfWorkoutProgrammes = workoutManager.numberOfWorkoutProgrammes()
+                    
+                    displayedProgrammes = (0, min(4, numberOfWorkoutProgrammes)-1)
+                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedProgrammes)
 
-                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(0,3)
                     touchActiveRegions = lcd.drawProgrammeSelector(workoutParametres)
 
                     while self.state == "ProgSelect":
@@ -158,16 +172,27 @@ class Supervisor:
                             for region in touchActiveRegions:
                                 boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
 
-                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                if value == "NextPage":
+                                    displayedProgrammes = (displayedProgrammes(1) + 1, min(displayedProgrammes(1)+4, numberOfWorkoutProgrammes-1))
+
+                                elif value == "PreviousPage":
+                                    displayedProgrammes = (displayedProgrammes(0)-4, displayedProgrammes(0)-1)
+
+                                elif self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                     self.selectedProgramme = value
                                     ## then go back to the correct state
                                     self.state = self.oldState
                                     self.oldState = "ProgSelect"
-                                    break
+                                    break   ## break the loop, skip new page drawing
+
+                                touchActiveRegions = lcd.drawProgrammeSelector(workoutParametres)   ### draw new page
+                                break   ### skip the rest of the loop, b/c page has changes
                         asyncio.sleep(0.1)
 
                 case "Settings":
-                    print("state: Programme selector")
+                    print("state: Settings")
+                    #### 
+        print("End of main loop")
         
 
     
