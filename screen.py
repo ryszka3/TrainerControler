@@ -63,7 +63,8 @@ class ScreenManager:
         self.COLOUR_TEXT_DARK:  tuple = (30,   50,  60)
         self.COLOUR_BUTTON:     tuple = (200,  60, 100)
         self.COLOUR_HEART:      tuple = (207,  17,  17)
-        self.COLOUR_TT:         tuple = (207,  17,  17)
+        self.COLOUR_TT:         tuple = (38,  188, 196)
+        self.COLOUR_CLIMBER:    tuple = (32,  140,  20)
 
         #self.display = TFT.ILI9341(dc     = PIN_DC, 
          #                          rst    = PIN_RST, 
@@ -78,28 +79,6 @@ class ScreenManager:
     def assignDataContainer (self, container: DataContainer):
         self.dataContainer:DataContainer = container
     
-    def drawPage(self, pageID: str):
-       
-        if pageID == "MainMenu":
-            self.drawPageMainMenu()
-
-        if pageID == "History":
-            pass
-        if pageID == "UserSelect":
-            pass
-        if pageID == "Programmes":
-            self.drawProgrammeSelector
-        if pageID == "WorkoutStart":
-           self.drawProgrammeSelector()
-
-        if pageID == "WorkoutRunning":
-            self.drawPageWorkout()
-
-        if pageID == "WorkoutSave":
-            pass
-
-        self.display.display()
-
 
     def drawProgrammeEditor(self, programme: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 
@@ -620,7 +599,7 @@ class ScreenManager:
         self.im.save("workout.png")
         return touchActiveRegions
             
-
+    #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
     def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
         #self.display.clear()
         #draw = self.display.draw() # Get a PIL Draw object
@@ -634,15 +613,24 @@ class ScreenManager:
 
         stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgramme", "Freeride", "ProgSelect")
         
+        DEVICES_HEIGHT = 23
+        heartImage: Image   = self.drawHeart(DEVICES_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        trainerImage: Image = self.drawTrainer(DEVICES_HEIGHT, colour_trainer, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        #climberImage: Image = self.drawClimber(DEVICES_HEIGHT, colour_climber, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        
         Y_Pos = self.MARGIN_LARGE
-        X_Pos = int((self.WIDTH - 4 * self.MARGIN_LARGE) / 3)
-        HEART_HEIGHT = 21
-        heartImage = self.drawHeart(HEART_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        X_Pos = int(self.MARGIN_LARGE*1.5 + box_width -heartImage.width/2)
 
         #self.display.buffer
         self.im.paste(heartImage, (X_Pos, Y_Pos))
+       
+        X_Pos = int(self.WIDTH/2 - trainerImage.width/2) 
+        self.im.paste(trainerImage, (X_Pos, Y_Pos))
 
-        Y_Pos = HEART_HEIGHT + 3 * self.MARGIN_LARGE
+        #X_Pos = int(self.MARGIN_LARGE*2.5 + 2*box_width -climberImage.width/2)
+        #self.im.paste(climberImage, (X_Pos, Y_Pos))
+
+        Y_Pos = DEVICES_HEIGHT + 3 * self.MARGIN_LARGE
         X_Pos = self.MARGIN_LARGE
         for i, zipped in enumerate(zip(box_labels, stateMachineStates)):
             
@@ -685,6 +673,38 @@ class ScreenManager:
         #self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
         #self.display.display()
 
+    def drawTrainer(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
+        
+        WH_RATIO = 1
+        width = int(height * WH_RATIO / 2) * 2 + 1
+        
+        image = Image.new('RGB', (width, height), colour_bg)
+        draw = ImageDraw.Draw(image)
+
+        X_pos_offset = -1
+        Y_pos_offset = -1
+
+        stroke_wide = max(3, int(1/10 * height))
+        stroke_narrow = max(1, int(3/50 * height))
+        
+        draw.line((width/3, height/2+2, width/5, height/4), fill=colour_outline, width=stroke_wide)
+        draw.line((width/3, height/2+2, width/5, height/4), fill=colour_fill, width=stroke_narrow)
+
+        draw.line((width/8, height/4, width*3/8, height/4), fill=colour_outline, width=stroke_wide)
+        draw.line((width/8+1, height/4, width*3/8-1, height/4), fill=colour_fill, width=stroke_narrow)
+
+        draw.line((width*6/8, height/10, width*6/8, height*4/6), fill=colour_outline, width=stroke_wide)
+        draw.line((width*6/8, height/10+1, width*6/8, height*4/6+1), fill=colour_fill, width=stroke_narrow)
+
+        draw.line((width*5/8, height/6, width*7/8, height/11), fill=colour_outline, width=stroke_narrow)
+        
+        draw.ellipse(xy=(width/10, height/2, width/10*9, height/10*9), fill=colour_fill, outline=colour_outline, width=1)
+
+        draw.regular_polygon((width*4/11, height*7/10, stroke_narrow), n_sides=80, fill=colour_outline)
+        draw.line(xy=(width*4/11, height*7/10, width*6/10, height*7/10), fill=colour_outline, width=stroke_narrow-1)
+        draw.line(xy=(width*5/10, height*7/10, width*6/10, height*7/10), fill=colour_outline, width=stroke_narrow)
+
+        return image
 
     def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
 
@@ -753,7 +773,6 @@ class ScreenManager:
             Y_pos -= 1
             X_pos -= 1
 
-        #image.save("heart.png")
         return image
 
 
@@ -773,8 +792,9 @@ if __name__ == "__main__":
     lcd = ScreenManager()
     lcd.assignDataContainer(data)
     #lcd.drawPageWorkout("Program", "PROGRAM")
-    lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+    lcd.drawPageMainMenu(lcd.COLOUR_BG_LIGHT, lcd.COLOUR_BG_LIGHT)
     #lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
+    #lcd.drawTrainer(21, colour_outline=lcd.COLOUR_OUTLINE, colour_fill=lcd.COLOUR_TT, colour_bg=lcd.COLOUR_BG)
     #lcd.drawConnectionErrorMessage()
 
     workouts = Workouts()

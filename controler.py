@@ -103,6 +103,11 @@ class Supervisor:
                             TTFillColour = lcd.COLOUR_BG_LIGHT
                             device_turboTrainer.connect = True  ## Maintain this flag true to continue to try to connect  
 
+                        #ClimberFillColour = lcd.COLOUR_CLIMBER
+                        #if device_climber.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
+                        #    ClimberFillColour = lcd.COLOUR_BG_LIGHT
+                        #    device_climber.connect = True  ## Maintain this flag true to continue to try to connect  
+
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
                             for region in touchActiveRegions:
@@ -229,5 +234,6 @@ async def main():
 
 
 ####    Trigger Main    ####
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
 
