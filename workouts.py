@@ -97,7 +97,7 @@ class WorkoutManager():
                     if entry.type == "Start":   # Starting a new workout
                         print("Starting programme no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
-                        self.dataContainer.workoutDuration = self.workouts.getSingleWorkoutParameters(entry.data).totalDuration
+                        self.dataContainer.workoutDuration = self.currentWorkout.getParameters().totalDuration
                         self.state = "WARMUP-PROGRAM"
                     
                     elif entry.type == "Freeride":
