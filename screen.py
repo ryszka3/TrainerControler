@@ -108,30 +108,18 @@ class ScreenManager:
         X_Pos = self.MARGIN_LARGE
         Y_Pos = self.MARGIN_SMALL
 
-        button_label = ("Save", "Discard")
+        button_label = "Finish"
         
         font = ImageFont.load_default(10)
-        for i, label in enumerate(button_label):
-            button_xy = (X_Pos, Y_Pos)
-            button_xy += (button_xy[0] + button_dims[0], button_xy[1] + button_dims[1])
-            button_centre = (button_xy[0] + button_dims[0] / 2, button_xy[1] + button_dims[1] / 2)
-            
-            draw.rounded_rectangle(xy = button_xy,
-                                radius = 3,
-                                fill = self.COLOUR_BUTTON,
-                                outline = self.COLOUR_BUTTON,
-                                width = 2)
-            
-            draw.text(xy = button_centre, 
-                                text = label,
-                                fill = self.COLOUR_TEXT_LIGHT,
-                                font = font,
-                                anchor="mm")
-            
-            touchActiveRegions += ((button_xy, label),)
-            Y_Pos += i * 30
 
-
+        button_xy = (X_Pos, Y_Pos)
+        button_xy += (button_xy[0] + button_dims[0], button_xy[1] + button_dims[1])
+        button_centre = (button_xy[0] + button_dims[0] / 2, button_xy[1] + button_dims[1] / 2)
+        
+        draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON, outline = self.COLOUR_BUTTON, width = 2)
+        draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
+        touchActiveRegions += ((button_xy, button_label),)
+        Y_Pos += 30
         
         paramsLabels = ("Name:", "Duration:", "Avg Power:", "Work:")
         paramsUnits = ("", "s", "W", "kJ")

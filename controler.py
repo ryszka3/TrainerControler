@@ -3,7 +3,7 @@ import configparser
 import queue
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
-from   datatypes   import DataContainer, UserList, QueueEntry
+from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
 from   screen      import ScreenManager, TouchScreen
 
 
@@ -158,7 +158,7 @@ class Supervisor:
                                             self.state = "MainMenu"
                                             break
 
-                                        elif workoutManager.state == "PROGRAM" or workoutManager.state == "FREERIDE":
+                                        elif workoutManager.state in ("PROGRAM", "FREERIDE"):
                                             workoutManager.queue.put(QueueEntry("Pause", 0))
 
                                         else:
@@ -176,8 +176,69 @@ class Supervisor:
                         break
                     else:
                         #### if coming from prog select then start the editor
+                        editedWorkout = workoutManager.workouts.getWorkout(self.selectedProgramme)
+                        editedSegment = WorkoutSegment()
+                        selectedSegmentID = None
+                        touchActiveRegions = lcd.drawProgrammeEditor(editedWorkout, selectedSegmentID, editedSegment)
                         
-                        pass
+                        while self.state == "ProgEdit":
+                            
+                            touch, location = touchScreen.checkTouch()
+                            if touch == True:
+                                for region in touchActiveRegions:
+                                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                        
+                                        if value in ("Power", "Level"):
+                                            editedSegment.segmentType = value
+
+                                        elif value in ("- 50", "- 5", "+ 5", "+ 50"):
+                                            editedSegment.setting += int(str(value).replace(" ", ""))
+                                            #editedSegment.setting = min, max
+
+                                        elif value in ("-10m", "-1m", "+1m", "+10m"):
+                                            editedSegment.duration += int(str(value).replace("m","")) * 60
+
+                                        elif value in ("-10s", "+10s"):
+                                            editedSegment.duration += int(str(value).replace("m","")) * 1
+
+                                        elif value in range(0, 999):    ## clicked on a segments chart
+                                            selectedSegmentID = value
+                                            editedSegment = editedWorkout.segments[selectedSegmentID].copy()  ## load segment to editor
+                                        
+                                        elif value == "Insert":
+                                            editedWorkout.insertSegment(selectedSegmentID, editedSegment)
+
+                                        elif value == "Add":
+                                            numberOfSegments = len(editedWorkout.segments)
+                                            editedWorkout.insertSegment(numberOfSegments, editedSegment)
+                                            
+                                            ## reset edited seg and pointer
+                                            editedSegment = WorkoutSegment()
+                                            selectedSegmentID = None
+
+                                        elif value == "Update":
+                                            editedWorkout.insertSegment(selectedSegmentID, editedSegment)
+                                            
+                                            ## reset edited seg and pointer
+                                            editedSegment = WorkoutSegment()
+                                            selectedSegmentID = None
+
+                                        elif value == "Remove":
+                                            editedWorkout.removeSegment(selectedSegmentID)
+
+                                            # reset edited seg and pointer
+                                            editedSegment = WorkoutSegment()
+                                            selectedSegmentID = None
+
+                                        elif value == "Finish":
+                                            pass
+
+
+                                touchActiveRegions = lcd.drawProgrammeEditor(editedWorkout, selectedSegmentID, editedSegment)
+
+
+                                        
                 
                 
                 case "ProgSelect":

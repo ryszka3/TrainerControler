@@ -7,7 +7,16 @@ from collections import namedtuple
 User = namedtuple("User", ["Name", "Max_HR", "FTP"])
 WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
 
+class WorkoutSegment:
+    def __init__(self, segType: str = "Power", dur: int = 60, set: int = 150) -> None:
+        self.segmentType: str = segType
+        self.duration: int = dur
+        self.setting: int = set
+        self.startTime = 0
+        self.elapsedTime = 0
 
+    def copy(self):
+        return copy.deepcopy(self)
 
 class MinMaxIncrement:
     def __init__(self) -> None:
@@ -33,26 +42,23 @@ class UserList:
             self.listOfUsers.append(record)
 
 
-
-
-
-#class WorkoutParameters:
- #    def __init__(self, name, totalDuration, avgPower, maxPower, totWork, avgLevel, segChartData, minPow) -> None:
-  #      self.name = name
-   #     self.totalDuration = totalDuration
-    #    self.avgPower = avgPower
-     #   self.totalWork = totWork
-      #  self.avgLevel = avgLevel
-       # self.segmentsChartData:list = segChartData
-        #self.maxPower = maxPower
-        #self.minPower = minPow
-
-
-
 class WorkoutProgram:
     def __init__(self) -> None:
         self.name: str = None
         self.segments:list = None
+
+    def setName(self, name:int):
+        self.name = str(name)
+
+    def insertSegment(self, position: int, segment:WorkoutSegment):
+        self.segments.insert(position, segment)
+
+    def updateSegment(self, position: int, segment: WorkoutSegment):
+        self.segments.pop(position)
+        self.segments.insert(position, segment)
+
+    def removeSegment(self, position):
+        self.segments.pop(position)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -96,17 +102,6 @@ class WorkoutProgram:
             pass
 
         return WorkoutParameters(self.name, totalDuration, averagePower, totalWork, maxPower, averageLevel, segmentChartData, minPower)
-
-
-
-
-class WorkoutSegment:
-    def __init__(self, segType: str, dur: int, set: int) -> None:
-        self.segmentType: str = segType
-        self.duration: int = dur
-        self.setting: int = set
-        self.startTime = 0
-        self.elapsedTime = 0
 
 
 class QueueEntry:
