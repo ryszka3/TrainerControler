@@ -58,7 +58,7 @@ class ScreenManager:
         self.COLOUR_BG:         tuple = (31,   31,  31)
         self.COLOUR_BG_LIGHT:   tuple = (62,   62,  62)
         self.COLOUR_FILL:       tuple = (139, 175, 255)
-        self.COLOUR_OUTLINE:    tuple = (208, 220, 170)
+        self.COLOUR_OUTLINE:    tuple = (255, 215, 10)
         self.COLOUR_TEXT_LIGHT: tuple = (156, 223, 250)
         self.COLOUR_TEXT_DARK:  tuple = (30,   50,  60)
         self.COLOUR_BUTTON:     tuple = (200,  60, 100)
@@ -260,16 +260,45 @@ class ScreenManager:
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
         
+        self.im=self.im.convert("L")
+        self.im=self.im.convert("RGB")
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(12)
         touchActiveRegions = tuple()
         
         numberOfButtons = len(options)
+        buttonLength = int(max([draw.textlength(opt, font=font) for opt in options]) + 4)
+        buttonHeight = 16
+        marginLength = 8
+
+    
+        messageWidth = numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1)
+        messageHeight = 50
+
+        box_xy = (self.WIDTH/2-messageWidth/2, self.HEIGHT/2,
+                  self.WIDTH/2+messageWidth/2, self.HEIGHT/2+messageHeight)
         
+        box_bg_extent = 8
+        box_bg_xy = (box_xy[0]-box_bg_extent, box_xy[1]-box_bg_extent, box_xy[2]+box_bg_extent, box_xy[3]+box_bg_extent)
+        draw.rectangle(xy=box_bg_xy, fill=self.COLOUR_BG_LIGHT)
+        draw.rectangle(xy=box_xy, outline=self.COLOUR_OUTLINE, fill=self.COLOUR_BG_LIGHT, width=2)
 
+        draw.text(xy=(self.WIDTH/2, self.HEIGHT/2+12), text=message, font=font, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
+        
+        font = ImageFont.load_default(10)
 
-        self.im.save("dialog.png")
+        X_pos = box_xy[0] + marginLength 
+        Y_pos = box_xy[1] + 25
+        for opt in options:
+
+            button_xy = (X_pos, Y_pos, X_pos+buttonLength, Y_pos+buttonHeight)
+            draw.rectangle(xy=button_xy, fill=self.COLOUR_BUTTON)
+            draw.text(xy=(X_pos+buttonLength/2, Y_pos+buttonHeight/2), text=opt, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
+            X_pos += buttonLength+marginLength
+            touchActiveRegions += ((button_xy, opt),)
+
+        self.im.show()
         return touchActiveRegions
 
     def drawProgramSelector(self, listOfParametres: list) -> tuple:
@@ -792,7 +821,7 @@ if __name__ == "__main__":
     lcd = ScreenManager()
     lcd.assignDataContainer(data)
     #lcd.drawPageWorkout("Program", "PROGRAM")
-    lcd.drawPageMainMenu(lcd.COLOUR_BG_LIGHT, lcd.COLOUR_BG_LIGHT)
+    #lcd.drawPageMainMenu(lcd.COLOUR_BG_LIGHT, lcd.COLOUR_BG_LIGHT)
     #lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
     #lcd.drawTrainer(21, colour_outline=lcd.COLOUR_OUTLINE, colour_fill=lcd.COLOUR_TT, colour_bg=lcd.COLOUR_BG)
     #lcd.drawConnectionErrorMessage()

@@ -1,11 +1,22 @@
-#import shutil
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 
-#import setuptools
+COLOUR_BG:         tuple = (31,   31,  31)
 
-#shutil.copytree("Workouts", "C:/users/MichalRyszka/Desktop/Workouts", dirs_exist_ok = True)
+im = Image.new('RGB', (320,240), COLOUR_BG)
+
+draw = ImageDraw.Draw(im)
+font = ImageFont.load_default(12)
+touchActiveRegions = tuple()
+
+options = ("Save", "Discard", "Cancel")
 
 
-from workouts import Workouts
+numberOfButtons = len(options)
 
-my = Workouts()
-my.saveToFile()
+max = max([draw.textlength(opt, font=font) for opt in options])
+
+print(max)
+
+#im.save("dialog.png")
