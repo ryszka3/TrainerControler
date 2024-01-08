@@ -80,7 +80,7 @@ class ScreenManager:
         self.dataContainer:DataContainer = container
     
 
-    def drawProgrammeEditor(self, programme: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
+    def drawProgramEditor(self, program: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 
         draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
@@ -88,7 +88,7 @@ class ScreenManager:
         touchActiveRegions = tuple()
         
         draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), 
-                    text = "Programme Editor", # Box title
+                    text = "Program Editor", # Box title
                     fill = self.COLOUR_TEXT_LIGHT,
                     font = font,
                     anchor="mt")
@@ -99,7 +99,7 @@ class ScreenManager:
                                                            segmentsColour  = self.COLOUR_FILL,
                                                            selectionColour = self.COLOUR_OUTLINE,
                                                            selectedSegment = selected_segment,
-                                                           workoutParams   = programme.getParameters())
+                                                           workoutParams   = program.getParameters())
 
         self.im.paste(im = chart, box=(self.MARGIN_LARGE, int(self.HEIGHT * 2 / 3)-self.MARGIN_LARGE))
         
@@ -126,7 +126,7 @@ class ScreenManager:
         paramsXoffsets = (0, 40,40,40)
         paramsFontSize = (8, 10,10,10)
 
-        for label, unit, Xoffset, size, value, in zip(paramsLabels, paramsUnits, paramsXoffsets, paramsFontSize, programme.getParameters()):
+        for label, unit, Xoffset, size, value, in zip(paramsLabels, paramsUnits, paramsXoffsets, paramsFontSize, program.getParameters()):
             
             font = ImageFont.load_default(8)
             draw.text(xy=(X_Pos, Y_Pos), text=label, fill=self.COLOUR_TEXT_LIGHT, font=font)
@@ -258,15 +258,27 @@ class ScreenManager:
         self.im.save("progEditor.png")
         return touchActiveRegions
     
-                
+    def drawMessageBox(self, message:str, options: tuple) -> tuple:
+        
+        #draw = self.display.draw() # Get a PIL Draw object
+        draw = ImageDraw.Draw(self.im)
+        font = ImageFont.load_default(12)
+        touchActiveRegions = tuple()
+        
+        numberOfButtons = len(options)
+        
 
-    def drawProgrammeSelector(self, listOfParametres: list) -> tuple:
+
+        self.im.save("dialog.png")
+        return touchActiveRegions
+
+    def drawProgramSelector(self, listOfParametres: list) -> tuple:
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
         draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), 
-                    text = "Select programme", # Box title
+                    text = "Select program", # Box title
                     fill = self.COLOUR_TEXT_LIGHT,
                     font = font,
                     anchor="mt")
@@ -597,9 +609,9 @@ class ScreenManager:
         noBoxes = (3, 2)    # in x and y
         box_width  = int((self.WIDTH - self.MARGIN_LARGE * (noBoxes[0]+1))/noBoxes[0])
         box_height = int(box_width  * 0.8)
-        box_labels = ("Change\nUser", "History", "Settings", "Edit\nProgrammes","Ride\na\nProgramme", "Freeride")
+        box_labels = ("Change\nUser", "History", "Settings", "Edit\nProgram","Ride\nProgram", "Freeride")
 
-        stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgramme", "Freeride", "ProgSelect")
+        stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgram", "Freeride", "ProgSelect")
         
         DEVICES_HEIGHT = 23
         heartImage: Image   = self.drawHeart(DEVICES_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
@@ -789,5 +801,5 @@ if __name__ == "__main__":
 
     seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
-    #lcd.drawProgrammeSelector(workouts.getListOfWorkoutParametres(0,1))
-    #lcd.drawProgrammeEditor(workouts.getWorkout(1),1,editedSegment=seg)
+    #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres(0,1))
+    #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)

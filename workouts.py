@@ -10,14 +10,39 @@ from   BLE_Device  import FitnessMachine
 
 class Workouts:
 
-    def __init__(self):
+    def __init__(self) -> None:
+        self.reloadFromFile()
 
-        try:
-            json_file = open('Programmes.json', 'r+t')
-        except:
-            raise Exception("Failed opening JSON file")
+
+    def saveToFile(self) -> None:
+
+        dataToJSON = list()
+
+        workoutObject: WorkoutProgram
+        for workoutObject in self.listOfWorkouts:
+
+            segmentsList: list = list()
+
+            segmentObject: WorkoutSegment
+            for segmentObject in workoutObject.segments:
+                segmentDict = {"Type": segmentObject.segmentType, "Duration": segmentObject.duration, "Setting": segmentObject.setting}
+                segmentsList.append(segmentDict)
+
+            workoutDict = {"Name": workoutObject.name, "Segments": segmentsList}
+
+            dataToJSON.append(workoutDict)
+
+        with open('Programs.json', 'wt') as json_file:
+            json.dump(dataToJSON, fp=json_file, indent=4)
+
+    
+    
+
+    def reloadFromFile(self) -> None:
         
-        json_data: list = json.load(json_file)
+        with open('Programs.json', 'r+t') as json_file:
+           json_data: list = json.load(json_file)
+        
         self.listOfWorkouts: list = list()
 
         for entry in json_data:
@@ -33,13 +58,26 @@ class Workouts:
             self.listOfWorkouts.append(workout)
 
 
-    def getWorkoutNames(self):
+    def getWorkoutNames(self) -> list:
         ret = list()
         workout: WorkoutProgram
         for workout in self.listOfWorkouts:
             ret.append(workout.name)
         return ret
 
+    def newWorkout(self, name:str=None) -> tuple:
+        
+        workout = WorkoutProgram()
+
+        if name is None:
+            name = datetime.datetime.now().strftime("wk-%y%m%d-%H%m")
+        workout.name = name
+        segment = WorkoutSegment()
+        workout.segments = [segment]
+        self.listOfWorkouts.append(workout)
+        workoutID = len(self.listOfWorkouts)-1
+
+        return (self.listOfWorkouts[workoutID],workoutID)
 
     def getWorkout(self, workoutID: int) -> WorkoutProgram:
         return self.listOfWorkouts[workoutID]
@@ -69,7 +107,7 @@ class WorkoutManager():
         self.workouts = Workouts()
         self.dataContainer: DataContainer = None
 
-    def numberOfWorkoutProgrammes(self) -> int:
+    def numberOfWorkoutPrograms(self) -> int:
         return len(self.workouts.listOfWorkouts)
 
     def startWorkout(self, workoutID):
@@ -80,7 +118,7 @@ class WorkoutManager():
         self.dataContainer = container
         print("starting workout manager")
         
-        while(self.dataContainer.programmeRunningFlag == True):
+        while(self.dataContainer.programRunningFlag == True):
             entry: QueueEntry = None
             
 
@@ -95,7 +133,7 @@ class WorkoutManager():
                 if not entry == None: 
                     
                     if entry.type == "Start":   # Starting a new workout
-                        print("Starting programme no: ", entry.data)
+                        print("Starting program no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
                         self.dataContainer.workoutDuration = self.currentWorkout.getParameters().totalDuration
                         self.state = "WARMUP-PROGRAM"
@@ -146,7 +184,7 @@ class WorkoutManager():
                 else:
                     await asyncio.sleep(0.1)
             
-            if self.state == "WARMUP-PROGRAM" or self.state == "WARMUP-FREERIDE":
+            if self.state in ("WARMUP-PROGRAM", "WARMUP-FREERIDE"):
                 
                 await asyncio.sleep(3.0)
                 self.state = self.state.removeprefix("WARMUP-")
@@ -154,7 +192,7 @@ class WorkoutManager():
 
 
 
-            if self.state == "PAUSED-PROGRAM" or self.state == "PAUSED_FREERIDE":
+            if self.state in ("PAUSED-PROGRAM", "PAUSED_FREERIDE"):
                 if not entry == None: 
                     if entry.type == "Start":   # Resume
                         TurboTrainer.start()
@@ -163,7 +201,7 @@ class WorkoutManager():
                     await asyncio.sleep(0.1)
 
 
-            if self.state == "PROGRAM" or self.state == "FREERIDE":
+            if self.state in ("PROGRAM", "FREERIDE"):
                 
                 if not entry == None: 
                     if entry.type == "End":   # Stop the workout, go to STOP to close the datafile
@@ -218,7 +256,7 @@ class WorkoutManager():
                 await asyncio.sleep(0.01)
         
             if self.state == "STOP":
-                print("Ending  programme")
+                print("Ending  program")
                 #### Closing the logfile ####
                 try:
                     csvWriter.writerow(self.dataContainer.getIterableAverages())

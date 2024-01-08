@@ -35,7 +35,7 @@ class BLE_Device:
         
         self.dataContainer = container
         print("starting task:", self.name)
-        while(self.dataContainer.programmeRunningFlag == True):
+        while(self.dataContainer.programRunningFlag == True):
 
             if self.connect == False and self.connectionState == False:
                 #print("Staying off")
@@ -82,7 +82,7 @@ class BLE_Device:
 
                         self.connectionState = True
                         
-                        while self.connect and container.programmeRunningFlag:  ####    Internal state machine running while connected - Sending commands happen here
+                        while self.connect and container.programRunningFlag:  ####    Internal state machine running while connected - Sending commands happen here
                             await asyncio.sleep(0)
 
                             if not self.queue.empty():

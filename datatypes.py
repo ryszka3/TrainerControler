@@ -50,14 +50,17 @@ class WorkoutProgram:
     def setName(self, name:int):
         self.name = str(name)
 
-    def insertSegment(self, position: int, segment:WorkoutSegment):
+    def appendSegment(self, segment) -> None:
+        self.segments.append(segment)
+
+    def insertSegment(self, position: int, segment:WorkoutSegment) -> None:
         self.segments.insert(position, segment)
 
-    def updateSegment(self, position: int, segment: WorkoutSegment):
+    def updateSegment(self, position: int, segment: WorkoutSegment) -> None:
         self.segments.pop(position)
         self.segments.insert(position, segment)
 
-    def removeSegment(self, position):
+    def removeSegment(self, position) -> None:
         self.segments.pop(position)
 
     def copy(self):
@@ -135,7 +138,7 @@ class DataContainer:
         self.average: Dataset = Dataset()
         self.max: Dataset = Dataset()
         self.NoAverage:int = 0
-        self.programmeRunningFlag = True
+        self.programRunningFlag = True
         self.activeUser: User = None
         self.currentSegment: WorkoutSegment = None
 
