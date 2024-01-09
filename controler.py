@@ -271,7 +271,18 @@ class Supervisor:
                     displayedPrograms = (0, min(4, numberOfWorkoutPrograms)-1)
                     workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
 
-                    touchActiveRegions = lcd.drawProgramSelector(workoutParametres)
+                    showNextPageButton = False
+                    showPrevPageButton = False
+                    showNewProgramButton = False
+
+                    if numberOfWorkoutPrograms > 4:
+                        showNextPageButton = True
+
+                    if self.oldState == "ProgEdit":
+                        showNewProgramButton = True
+
+                    touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
+                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
 
                     while self.state == "ProgSelect":
                         touch, location = touchScreen.checkTouch()
@@ -285,6 +296,12 @@ class Supervisor:
                                 elif value == "PreviousPage":
                                     displayedPrograms = (displayedPrograms(0)-4, displayedPrograms(0)-1)
 
+                                elif value == "NewProgram":
+                                    self.selectedProgram = None
+                                    self.state = self.oldState
+                                    self.oldState = "ProgSelect"
+                                    break   ## break the loop, skip new page drawing
+
                                 elif self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                     self.selectedProgram = value
                                     ## then go back to the correct state
@@ -292,7 +309,20 @@ class Supervisor:
                                     self.oldState = "ProgSelect"
                                     break   ## break the loop, skip new page drawing
 
-                                touchActiveRegions = lcd.drawProgramSelector(workoutParametres)   ### draw new page
+                                if displayedPrograms[0] > 0:
+                                    showPrevPageButton = True
+                                else:
+                                    showPrevPageButton = False
+
+                                if displayedPrograms[1] < numberOfWorkoutPrograms:
+                                    showNextPageButton = True
+                                else:
+                                    showNextPageButton = False
+
+                                workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
+                                touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
+                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
+                                
                                 break   ### skip the rest of the loop, b/c page has changes
                         asyncio.sleep(0.1)
 

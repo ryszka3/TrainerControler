@@ -76,35 +76,40 @@ class WorkoutProgram:
         totalWork: float = 0
         segmentChartData = list()
 
-        noSegments = 0
+        totalDurationOfPowerSegments = 0
+        totalDurationOfLevelSegments = 0
 
         segment: WorkoutSegment
         if self.segments is not None:
             for segment in self.segments: 
 
                 totalDuration += segment.duration
-                noSegments += 1
+                
                 if segment.segmentType == "Power":
 
-                    averagePower += segment.setting
+                    totalDurationOfPowerSegments += segment.duration
+                    averagePower += segment.setting * segment.duration
                     maxPower = max(maxPower, segment.setting)
                     minPower = min(minPower, segment.setting)
                     totalWork += segment.setting * segment.duration
-                    chartPoint = tuple((noSegments, segment.setting, segment.duration))
+                    chartPoint = tuple((totalDurationOfPowerSegments, segment.setting, segment.duration))
                     segmentChartData.append(chartPoint)
                 
                 elif segment.segmentType == "Level":
+                    totalDurationOfLevelSegments += segment.duration
                     averageLevel += segment.setting
         
 
         totalWork /= 1000
         try:
-            averagePower /= noSegments
-            averageLevel /= noSegments
+            averagePower /= totalDurationOfPowerSegments
+            averageLevel /= totalDurationOfLevelSegments
         except:
             pass
 
-        return WorkoutParameters(self.name, totalDuration, averagePower, totalWork, maxPower, averageLevel, segmentChartData, minPower)
+        return WorkoutParameters(name=self.name, totalDuration=totalDuration, avgPower=int(averagePower), 
+                                 totalWork=totalWork, maxPower=maxPower, avgLevel=int(averageLevel), 
+                                 segmentsChartData=segmentChartData, minPower=minPower)
 
 
 class QueueEntry:

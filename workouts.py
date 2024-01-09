@@ -89,9 +89,11 @@ class Workouts:
 
         for i in range(start, stop + 1):
             try:
-                ret.append(self.listOfWorkouts[i].getParameters())
+                prog: WorkoutProgram = self.listOfWorkouts[i]
+                ret.append(prog.getParameters())
             except:
                 pass
+
         return ret
 
 

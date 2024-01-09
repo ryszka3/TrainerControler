@@ -301,16 +301,56 @@ class ScreenManager:
         self.im.show()
         return touchActiveRegions
 
-    def drawProgramSelector(self, listOfParametres: list) -> tuple:
+    def drawProgramSelector(self, listOfParametres: list, previousEnabled: bool = False, nextEnabled: bool = False, newProgramEnabled: bool = True) -> tuple:
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
-        draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), 
-                    text = "Select program", # Box title
-                    fill = self.COLOUR_TEXT_LIGHT,
-                    font = font,
-                    anchor="mt")
+        draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), text = "Select program", fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
+
+        touchActiveRegions = tuple()
+
+        triangleWidth = 15
+        triangleHeight = 10
+
+        if previousEnabled == True:
+
+            triangle_xy = (self.MARGIN_SMALL, self.MARGIN_LARGE, 
+                        self.MARGIN_SMALL+triangleWidth, self.MARGIN_LARGE - triangleHeight/2, 
+                        self.MARGIN_SMALL+triangleWidth, self.MARGIN_LARGE + triangleHeight/2)
+
+            draw.polygon(xy=triangle_xy, outline=self.COLOUR_OUTLINE, width=1, fill=self.COLOUR_BUTTON)
+            
+            triangle_touchbox_xy = (triangle_xy[0], triangle_xy[3], triangle_xy[4], triangle_xy[5])
+            
+            touchActiveRegions += ((triangle_touchbox_xy, "PreviousPage"),)
+        
+        if nextEnabled== True:
+            
+            triangle_xy = (self.WIDTH - self.MARGIN_SMALL, self.MARGIN_LARGE, 
+                        self.WIDTH - self.MARGIN_SMALL - triangleWidth, self.MARGIN_LARGE - triangleHeight/2, 
+                        self.WIDTH - self.MARGIN_SMALL - triangleWidth, self.MARGIN_LARGE + triangleHeight/2)
+            
+            draw.polygon(xy=triangle_xy, outline=self.COLOUR_OUTLINE, width=1, fill=self.COLOUR_BUTTON)
+
+            triangle_touchbox_xy = (triangle_xy[2], triangle_xy[3], triangle_xy[0], triangle_xy[5])
+            
+            touchActiveRegions += ((triangle_touchbox_xy, "NextPage"),)
+        
+
+        if newProgramEnabled == True:
+
+            font = ImageFont.load_default(10)
+            newButtonWidth = 70
+            newButtonHeigh = 14
+            newButtonStartX = 30
+
+            newButton_xy = (newButtonStartX, self.MARGIN_SMALL, newButtonStartX + newButtonWidth, self.MARGIN_SMALL+newButtonHeigh)
+            draw.rectangle(xy=newButton_xy, fill=self.COLOUR_BUTTON)
+            draw.text(xy=(newButtonStartX+newButtonWidth/2, self.MARGIN_SMALL+newButtonHeigh/2),
+                       text="New Program", font=font, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
+            
+            touchActiveRegions += ((newButton_xy, "NewProgram"),)
 
         X_offset_start = 0
         Y_offset_start = 30
@@ -318,7 +358,7 @@ class ScreenManager:
         chartWidth = box_width_height[0]-10
         chartHeight = 30
 
-        touchActiveRegions = tuple()
+        
 
         for i in range(2):
             
@@ -424,7 +464,6 @@ class ScreenManager:
 
             X_offset_start += self.WIDTH / 2
 
-        self.im.save("selector.png")
         return touchActiveRegions
     
 
@@ -468,6 +507,7 @@ class ScreenManager:
 
             segment_wh = (int(segment[2] / segment_width_normalisation_factor) + 1,
                          int((segment[1] / segment_height_normalisation_factor +1 - barHeightAdjustment) * barHeightScaler))
+
             
             segment_xy = (chartXPos, chartHeight-segment_wh[1], chartXPos + segment_wh[0], chartHeight)
             
@@ -830,5 +870,5 @@ if __name__ == "__main__":
 
     seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
-    #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres(0,1))
+    lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
     #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)
