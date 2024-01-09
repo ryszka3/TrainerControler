@@ -3,8 +3,9 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-#import Adafruit_ILI9341 as TFT
-#import Adafruit_GPIO.SPI as SPI
+import ILI9341 as TFT
+import SPI
+from XPT2046 import Touch
 
 from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram
 from workouts  import Workouts
@@ -31,11 +32,70 @@ def formatTime(dur: int) -> str:
 
 class TouchScreen:
 
-    def checkTouch() -> tuple:
+    def __init__(self) -> None:
+        BUS_FREQUENCY = 4000000
+        # Raspberry Pi configuration
+        SPI_PORT   = 0
+        SPI_DEVICE = 1
+        self.WIDTH  = 320
+        self.HEIGHT = 240
+    
+        self.touchscreen = Touch(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY))
+        
+        self.setCalibration(0.17, -17, 0.17, -17)   # default calibration, to be overwriten with values loaded from config
 
-        return (False, (0,0,0,0))
+    
+    def setCalibration(self, x_multiplier: float, x_offset: float, y_multiplier: float, y_offset: float):
+        
+        self.x_multiplier = x_multiplier
+        self.x_offset = x_offset
+
+        self.y_multiplier = y_multiplier
+        self.y_offset = y_offset
+    
+
+    def scaleCoordinates(self, point):
+        """Scales raw X,Y values to match the LCD screen pixel dimensions."""
+        a, b = point
+        x = int(self.x_multiplier * a + self.x_offset)
+        y = int(self.y_multiplier * b + self.y_offset)
+        
+        return (x, y)
+    
+    
+    def calculateCalibrationConstants(self, requestedPoints: tuple, measuredPoints: tuple) -> tuple:
+
+        measuredP1,  measuredP2  = measuredPoints
+        requestedP1, requestedP2 = requestedPoints
+
+        requestedPoint_1x, requestedPoint_1y = requestedP1    # unpack into x, y pair
+        requestedPoint_2x, requestedPoint_2y = requestedP2
+        
+        measuredPoint_1x, measuredPoint_1y = measuredP1     # unpack into x, y pair
+        measuredPoint_2x, measuredPoint_2y = measuredP2
+
+        measuredPoint_1x_raw = (measuredPoint_1x - self.x_offset) / self.x_multiplier
+        measuredPoint_2x_raw = (measuredPoint_2x - self.x_offset) / self.x_multiplier
+
+        measuredPoint_1y_raw = (measuredPoint_1y - self.y_offset) / self.y_multiplier
+        measuredPoint_2y_raw = (measuredPoint_2y - self.y_offset) / self.y_multiplier
+
+        self.x_multiplier = (requestedPoint_2x - requestedPoint_1x) / (measuredPoint_2x_raw - measuredPoint_1x_raw)
+        self.x_offset = requestedPoint_1x - self.x_multiplier * measuredPoint_1x_raw
+
+        self.y_multiplier = (requestedPoint_2y - requestedPoint_1y) / (measuredPoint_2y_raw - measuredPoint_1y_raw)
+        self.y_offset = requestedPoint_1y - self.y_multiplier * measuredPoint_1y_raw
+
+        return (self.x_multiplier, self.x_offset, self.y_multiplier, self.y_offset)
 
 
+    def checkTouch(self) -> tuple:
+        rawTouch = self.touchscreen.get_touch()
+        if rawTouch is None:
+            return (False, (0,0))
+        else:
+            scaled = self.scaleCoordinates(rawTouch)
+            return (True, scaled)
 
 class ScreenManager:
     

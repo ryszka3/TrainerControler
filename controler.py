@@ -41,6 +41,17 @@ if "TurboTrainer" in config:
         raise Exception("Config file does not contain correct entries for devices")
 
 
+if "TouchScreen" in config:
+    try:
+        x_multiplier = config["TouchScreen"]["X_Multiplier"]
+        x_offset =     config["TouchScreen"]["X_Offset"]
+        y_multiplier = config["TouchScreen"]["Y_Multiplier"]
+        y_offset =     config["TouchScreen"]["Y_Offset"]
+
+        touchScreen.setCalibration(x_multiplier, x_offset, y_multiplier, y_offset)
+
+    except:
+        pass    # no worries, will use the defaults for now
 
 #####    Main Program functions here    ####
 
