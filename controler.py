@@ -272,8 +272,11 @@ class Supervisor:
                                                     
                                                     break   ## exits while loop if clicked on a valid button
 
+                                                asyncio.sleep(0.1)
+
 
                                 touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
+                            asyncio.sleep(0.1)
 
                 case "ProgSelect":
                     
@@ -339,6 +342,12 @@ class Supervisor:
 
                 case "Settings":
                     print("state: Settings")
+                    
+                    break
+                    config.set("TouchScreen","X_Multiplier", "11")
+                    
+                    with open('config.ini', 'wt') as file:
+                        config.write(file)
                     #### 
         print("End of main loop")
         

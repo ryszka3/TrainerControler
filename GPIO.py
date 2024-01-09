@@ -20,8 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-import Adafruit_GPIO.Platform as Platform
-
+import RPi.GPIO
 
 OUT     = 0
 IN      = 1
@@ -258,11 +257,5 @@ class RPiGPIOAdapter(BaseGPIO):
 
 
 def get_platform_gpio(**keywords):
-    """Attempt to return a GPIO instance for the platform which the code is being
-    executed on.  Currently supports only the Raspberry Pi using the RPi.GPIO
-    library and Beaglebone Black using the Adafruit_BBIO library.  Will throw an
-    exception if a GPIO instance can't be created for the current platform.  The
-    returned GPIO object is an instance of BaseGPIO.
-    """
-    import RPi.GPIO
+
     return RPiGPIOAdapter(RPi.GPIO, **keywords)

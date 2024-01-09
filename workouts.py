@@ -252,7 +252,6 @@ class WorkoutManager():
                 if self.dataContainer.workoutTime - self.lastSaveTime > 1.0:   # 
                     
                     self.lastSaveTime = self.dataContainer.workoutTime
-                    #print("Saving data, time: ", self.dataContainer.workoutTime)
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
                 
                 await asyncio.sleep(0.01)

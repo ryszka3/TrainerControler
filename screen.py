@@ -3,9 +3,9 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-import ILI9341 as TFT
-import SPI
-from XPT2046 import Touch
+#import ILI9341 as TFT
+#import SPI
+#from XPT2046 import Touch
 
 from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram
 from workouts  import Workouts
@@ -578,7 +578,25 @@ class ScreenManager:
 
         return (image, touchActiveRegions)
 
+    def drawCalibrationPage(self, point1:tuple, point2:tuple) -> None:
+        #self.display.clear(self.COLOUR_BG)
+        #draw = self.display.draw() # Get a PIL Draw object
+        draw = ImageDraw.Draw(self.im)
 
+        LINE_LENGTH = 6
+        GAP = 3
+
+        for point in (point1, point2):
+            
+            point_x, point_y = point
+
+            draw.line(xy=((point_x - LINE_LENGTH - GAP, point_y), (point_x - GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
+            draw.line(xy=((point_x + GAP, point_y), (point_x + LINE_LENGTH + GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
+
+            draw.line(xy=((point_x, point_y - LINE_LENGTH - GAP), (point_x, point_y - GAP)), fill=self.COLOUR_OUTLINE, width=1)
+            draw.line(xy=((point_x, point_y + GAP), (point_x, point_y + LINE_LENGTH + GAP)), fill=self.COLOUR_OUTLINE, width=1)
+
+        self.im.show()
 
     def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
         #self.display.clear(self.COLOUR_BG)
@@ -725,7 +743,7 @@ class ScreenManager:
                 X_Pos += ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
             
             Y_Pos += section_height
-        self.im.save("workout.png")
+
         return touchActiveRegions
             
     #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
@@ -930,5 +948,6 @@ if __name__ == "__main__":
 
     seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
-    lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
+    #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
     #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)
+    lcd.drawCalibrationPage((20,20), (300, 220))
