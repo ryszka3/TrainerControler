@@ -303,52 +303,114 @@ class Supervisor:
                         if touch == True:
                             for region in touchActiveRegions:
                                 boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
 
-                                if value == "NextPage":
-                                    displayedPrograms = (displayedPrograms(1) + 1, min(displayedPrograms(1)+4, numberOfWorkoutPrograms-1))
+                                    if value == "NextPage":
+                                        displayedPrograms = (displayedPrograms(1) + 1, min(displayedPrograms(1)+4, numberOfWorkoutPrograms-1))
 
-                                elif value == "PreviousPage":
-                                    displayedPrograms = (displayedPrograms(0)-4, displayedPrograms(0)-1)
+                                    elif value == "PreviousPage":
+                                        displayedPrograms = (displayedPrograms(0)-4, displayedPrograms(0)-1)
 
-                                elif value == "NewProgram":
-                                    self.selectedProgram = None
-                                    self.state = self.oldState
-                                    self.oldState = "ProgSelect"
-                                    break   ## break the loop, skip new page drawing
+                                    elif value == "NewProgram":
+                                        self.selectedProgram = None
+                                        self.state = self.oldState
+                                        self.oldState = "ProgSelect"
+                                        break   ## break the loop, skip new page drawing
 
-                                elif self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                    self.selectedProgram = value
-                                    ## then go back to the correct state
-                                    self.state = self.oldState
-                                    self.oldState = "ProgSelect"
-                                    break   ## break the loop, skip new page drawing
+                                    else:
+                                        self.selectedProgram = value
+                                        ## then go back to the correct state
+                                        self.state = self.oldState
+                                        self.oldState = "ProgSelect"
+                                        break   ## break the loop, skip new page drawing
 
-                                if displayedPrograms[0] > 0:
-                                    showPrevPageButton = True
-                                else:
-                                    showPrevPageButton = False
+                                    if displayedPrograms[0] > 0:
+                                        showPrevPageButton = True
+                                    else:
+                                        showPrevPageButton = False
 
-                                if displayedPrograms[1] < numberOfWorkoutPrograms:
-                                    showNextPageButton = True
-                                else:
-                                    showNextPageButton = False
+                                    if displayedPrograms[1] < numberOfWorkoutPrograms:
+                                        showNextPageButton = True
+                                    else:
+                                        showNextPageButton = False
 
-                                workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
-                                touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
-                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-                                
-                                break   ### skip the rest of the loop, b/c page has changes
+                                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
+                                    touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
+                                                                    nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
+                                    
                         asyncio.sleep(0.1)
 
                 case "Settings":
                     print("state: Settings")
+                    touchActiveRegions = lcd.drawPageSettings()
                     
-                    break
-                    config.set("TouchScreen","X_Multiplier", "11")
+                    while self.state == "Settings":
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            for region in touchActiveRegions:
+                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+
+                                    self.oldState = self.state
+                                    self.state = value
+                                    break
+
+                        asyncio.sleep(0.1)
+
+                case "Calibrate":    ## screen alibration
+
+                    print("state: Calibrate")
+                    point1 = (20,20)
+                    point2 = (300,220)
+                    measuredP1 = None
+                    measuredP2 = None
+                    lcd.drawPageCalibration(point1)
                     
-                    with open('config.ini', 'wt') as file:
-                        config.write(file)
-                    #### 
+                    while self.state == "Calibrate":
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            if measuredP1 is None: # first point 
+                                measuredP1 = location
+                                lcd.drawPageCalibration(point2)
+
+                            else:
+                                measuredP2 = location
+                                # both points acquired,  now do calculation:
+                                calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
+                                                                                        measuredPoints=(measuredP1, measuredP2))
+                                
+                                config.set("TouchScreen", "x_multiplier", str(calibration[0]))
+                                config.set("TouchScreen", "x_offset",     str(calibration[1]))
+                                config.set("TouchScreen", "y_multiplier", str(calibration[2]))
+                                config.set("TouchScreen", "y_offset",     str(calibration[3]))
+                                
+                                with open('config.ini', 'wt') as file:
+                                    config.write(file)
+
+                                lcd.drawMessageBox("Calibration applied!", ("OK",))
+                                self.oldState = self.state
+                                self.state = "MainMenu"
+                                asyncio.sleep(3)
+
+                        asyncio.sleep(0.1)    
+
+                case "Trainer":
+
+                    pass
+                                        
+                case "HRMonitor":
+
+                    pass
+                                        
+                case "Climbr":
+
+                    pass
+                                        
+                                    
+                    
+
+                    
+                     
         print("End of main loop")
         
 
@@ -361,7 +423,7 @@ async def main():
 
     await asyncio.gather(
         device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
-        device_turboTrainer.connection_to_BLE_Device(lock, dataAndFlagContainer),
+        device_turboTrainer.   connection_to_BLE_Device(lock, dataAndFlagContainer),
         supervisor.loop(),
         workoutManager.run(device_turboTrainer, dataAndFlagContainer)
     )

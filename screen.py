@@ -40,7 +40,7 @@ class TouchScreen:
         self.WIDTH  = 320
         self.HEIGHT = 240
     
-        self.touchscreen = Touch(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY))
+        #self.touchscreen = Touch(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY))
         
         self.setCalibration(0.17, -17, 0.17, -17)   # default calibration, to be overwriten with values loaded from config
 
@@ -140,8 +140,64 @@ class ScreenManager:
         self.dataContainer:DataContainer = container
     
 
+    def drawPageSettings(self) -> tuple:
+        #draw = self.display.draw() # Get a PIL Draw object
+        draw = ImageDraw.Draw(self.im)
+        touchActiveRegions = tuple()
+        font = ImageFont.load_default(14)
+
+        buttonWidth = 110
+        buttonHeight = 70
+        Xmargin = (self.WIDTH - 2 * buttonWidth) / 3
+        Ymargin = (self.HEIGHT - 2 * buttonHeight) / 3
+        Yoffset = 16
+
+        button_mainMenu_xy = (self.MARGIN_SMALL, self.MARGIN_SMALL, self.MARGIN_SMALL + 80, self.MARGIN_SMALL+20)
+        button_mainMenu_Screenlabel = "Main Menu"
+        button_mainMenu_touchlabel = "MainMenu"
+
+        button1_xy = (self.WIDTH - Xmargin - buttonWidth, Ymargin + Yoffset, 
+                      self.WIDTH - Xmargin, Ymargin + buttonHeight + Yoffset)
+        button1_screenLabel = "Calibrate\nTouchscreen"
+        button1_touchLabel = "Calibrate"
+
+        button2_xy = (Xmargin, Ymargin+Yoffset, 
+                      Xmargin + buttonWidth, Ymargin + buttonHeight+Yoffset)
+        
+        button2_screenLabel = "Connect\nTrainer"
+        button2_touchLabel = "Trainer"
+
+        button3_xy = (Xmargin, self.HEIGHT - Ymargin - buttonHeight+Yoffset, 
+                      Xmargin + buttonWidth, self.HEIGHT - Ymargin+Yoffset)
+        
+        button3_screenLabel = "Connect\nHR Monitor"
+        button3_touchLabel = "HRMonitor"
+
+        button4_xy = (self.WIDTH - buttonWidth -Xmargin, self.HEIGHT - Ymargin - buttonHeight + Yoffset, 
+                      self.WIDTH - Xmargin, self.HEIGHT - Ymargin+Yoffset)
+        
+        button4_screenLabel = "TBD"
+        button4_touchLabel = "Climbr"
+        
+        allButtons = zip((button1_xy, button2_xy, button3_xy, button4_xy, button_mainMenu_xy),
+                         (button1_screenLabel, button2_screenLabel, button3_screenLabel, button4_screenLabel, button_mainMenu_Screenlabel),
+                         (button1_touchLabel, button2_touchLabel, button3_touchLabel, button4_touchLabel, button_mainMenu_touchlabel))
+
+
+        for button_xy, screenLabel, touchLabel in allButtons:
+        
+            button_centre = ((button_xy[2]+button_xy[0])/2, (button_xy[3]+button_xy[1])/2)
+            draw.rounded_rectangle(xy=button_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+            draw.text(xy=button_centre, text=screenLabel, anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+            touchActiveRegions += ((button_xy, touchLabel),)
+
+        self.im.show()
+        return touchActiveRegions
+
     def drawProgramEditor(self, program: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 
+        
+        #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
 
@@ -315,7 +371,6 @@ class ScreenManager:
                 Y_Pos += 16
                 X_Pos -= 3*26
 
-        self.im.save("progEditor.png")
         return touchActiveRegions
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
@@ -358,7 +413,6 @@ class ScreenManager:
             X_pos += buttonLength+marginLength
             touchActiveRegions += ((button_xy, opt),)
 
-        self.im.show()
         return touchActiveRegions
 
     def drawProgramSelector(self, listOfParametres: list, previousEnabled: bool = False, nextEnabled: bool = False, newProgramEnabled: bool = True) -> tuple:
@@ -578,7 +632,7 @@ class ScreenManager:
 
         return (image, touchActiveRegions)
 
-    def drawCalibrationPage(self, point1:tuple, point2:tuple) -> None:
+    def drawPageCalibration(self, point:tuple) -> None:
         #self.display.clear(self.COLOUR_BG)
         #draw = self.display.draw() # Get a PIL Draw object
         draw = ImageDraw.Draw(self.im)
@@ -586,15 +640,17 @@ class ScreenManager:
         LINE_LENGTH = 6
         GAP = 3
 
-        for point in (point1, point2):
-            
-            point_x, point_y = point
+        point_x, point_y = point
 
-            draw.line(xy=((point_x - LINE_LENGTH - GAP, point_y), (point_x - GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
-            draw.line(xy=((point_x + GAP, point_y), (point_x + LINE_LENGTH + GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
+        draw.line(xy=((point_x - LINE_LENGTH - GAP, point_y), (point_x - GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
+        draw.line(xy=((point_x + GAP, point_y), (point_x + LINE_LENGTH + GAP, point_y)), fill=self.COLOUR_OUTLINE, width=1)
 
-            draw.line(xy=((point_x, point_y - LINE_LENGTH - GAP), (point_x, point_y - GAP)), fill=self.COLOUR_OUTLINE, width=1)
-            draw.line(xy=((point_x, point_y + GAP), (point_x, point_y + LINE_LENGTH + GAP)), fill=self.COLOUR_OUTLINE, width=1)
+        draw.line(xy=((point_x, point_y - LINE_LENGTH - GAP), (point_x, point_y - GAP)), fill=self.COLOUR_OUTLINE, width=1)
+        draw.line(xy=((point_x, point_y + GAP), (point_x, point_y + LINE_LENGTH + GAP)), fill=self.COLOUR_OUTLINE, width=1)
+
+        font = ImageFont.load_default(14)
+        draw.text(xy=(self.WIDTH/2, self.HEIGHT/2), text="Touch the screen\nat the indicated spot", 
+                  align="center", anchor="mm", fill=self.COLOUR_FILL, font=font)
 
         self.im.show()
 
@@ -950,4 +1006,5 @@ if __name__ == "__main__":
 
     #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
     #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)
-    lcd.drawCalibrationPage((20,20), (300, 220))
+    lcd.drawPageCalibration((20,20))
+    #lcd.drawPageSettings()
