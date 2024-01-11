@@ -4,8 +4,21 @@ import datetime
 from collections import namedtuple
 
 
-User = namedtuple("User", ["Name", "Max_HR", "FTP"])
+
 WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
+
+
+class User:
+    def __init__(self, name, yob, maxhr, FTP, noWorkouts, totalDistance, totalEnergy, picture: str) -> None:
+        self.Name = name
+        self.yearOfBirth = yob
+        self.Max_HR = maxhr
+        self.FTP = FTP
+        self.noWorkouts = noWorkouts
+        self.totalDistance = totalDistance
+        self.totalEnergy = totalEnergy
+        self.picture = picture
+
 
 class WorkoutSegment:
     def __init__(self, segType: str = "Power", dur: int = 60, set: int = 150) -> None:
@@ -38,8 +51,33 @@ class UserList:
 
         for entry in json_data:
             maxhr = 220 - int(datetime.datetime.now().strftime("%Y")) + entry["YearOfBirth"]
-            record = User(entry["Name"], maxhr, entry["FTP"])
+            record = User(entry["Name"], entry["YearOfBirth"], maxhr, entry["FTP"], entry["noWorkouts"], entry["totDistance"], entry["totEnergy"], entry["Picture"])
             self.listOfUsers.append(record)
+
+    def updateUserRecord(self, userID: int, noWorkouts: int, distance: float, energy: float):
+
+        self.listOfUsers[userID].noWorkouts = noWorkouts
+        self.listOfUsers[userID].totalDistance += distance
+        self.listOfUsers[userID].totalEnergy += energy
+
+        dataToJSON = list()
+
+        user: User
+        for user in self.listOfUsers:
+
+            userDict = {"Name": user.Name, 
+                        "YearOfBirth": user.yearOfBirth, 
+                        "FTP": user.FTP, 
+                        "noWorkouts": user.noWorkouts, 
+                        "totDistance": user.totalDistance, 
+                        "totEnergy": user.totalEnergy,
+                        "Picture:": user.picture}
+
+            dataToJSON.append(userDict)
+
+        with open('users.json', 'wt') as json_file:
+            json.dump(dataToJSON, fp=json_file, indent=4)
+
 
 
 class WorkoutProgram:
@@ -137,15 +175,17 @@ class Dataset:
 
 class DataContainer:
     def __init__(self):
-        self.workoutTime: int = 0
-        self.workoutDuration: int = 0
+        self.workoutTime = int(0)
+        self.workoutDuration = int(0)
         self.momentary: Dataset = Dataset()
         self.average: Dataset = Dataset()
         self.max: Dataset = Dataset()
-        self.NoAverage:int = 0
-        self.programRunningFlag = True
+        self.NoAverage = int(0)
+        self.programRunningFlag = bool(True)
         self.activeUser: User = None
         self.currentSegment: WorkoutSegment = None
+        self.distance = float(0)
+        self.totalEnergy = float(0)
 
     def assignUser(self, user):
         self.activeUser = user

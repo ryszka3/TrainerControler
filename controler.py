@@ -58,11 +58,12 @@ if "TouchScreen" in config:
 class Supervisor:
     def __init__(self) -> None:
         self.queue = queue.SimpleQueue()
-        self.state: str = "MainMenu"
-        self.oldState: str = "MainMenu"
+        self.state: str = "UserChange"
+        self.oldState: str = "UserChange"
+        self.activeUserID = 0
 
     async def loop(self):
-        dataAndFlagContainer.assignUser(userList.listOfUsers[0])
+        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
         await asyncio.sleep(20.0)
         print("end Wait1")
         if device_heartRateSensor.connectionState == True:
@@ -75,6 +76,12 @@ class Supervisor:
         await asyncio.sleep(30.0)
         while workoutManager.state != "IDLE":
             await asyncio.sleep(1) 
+
+        userList.updateUserRecord(userID=self.activeUserID,
+                                  noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
+                                  distance = dataAndFlagContainer.distance,
+                                  energy = dataAndFlagContainer.totalEnergy)
+        
         dataAndFlagContainer.programRunningFlag = False
         print("Supervisor Closed")
 
@@ -92,7 +99,6 @@ class Supervisor:
 
     async def loopy(self):
 
-        dataAndFlagContainer.assignUser(userList.listOfUsers[0])
         lcd.assignDataContainer(dataAndFlagContainer)
         
         while True:     #### Main loop
@@ -177,8 +183,14 @@ class Supervisor:
 
                             lcd.drawPageWorkout("Program", workoutManager.state)
                             asyncio.sleep(0.1)
+                        #### program has ended
                         
+                        userList.updateUserRecord(userID=self.activeUserID,
+                                                  noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
+                                                  distance = dataAndFlagContainer.distance,
+                                                  energy = dataAndFlagContainer.totalEnergy)
 
+                        
                 case "ProgEdit":
 
                     if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
@@ -377,7 +389,7 @@ class Supervisor:
                                 measuredP2 = location
                                 # both points acquired,  now do calculation:
                                 calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
-                                                                                        measuredPoints=(measuredP1, measuredP2))
+                                                                                        measuredPoints= (measuredP1, measuredP2))
                                 
                                 config.set("TouchScreen", "x_multiplier", str(calibration[0]))
                                 config.set("TouchScreen", "x_offset",     str(calibration[1]))
@@ -395,22 +407,70 @@ class Supervisor:
                         asyncio.sleep(0.1)    
 
                 case "Trainer":
+                    print("state: Trainer")
 
-                    pass
+                    self.oldState = self.state
+                    self.state = "MainMenu"
                                         
                 case "HRMonitor":
+                    print("state: HRMonitor")
 
-                    pass
+                    self.oldState = self.state
+                    self.state = "MainMenu"
                                         
                 case "Climbr":
+                    print("state: Climbr")
 
-                    pass
-                                        
+                    self.oldState = self.state
+                    self.state = "MainMenu"
+
+                case "History":
+                    print("state: History")
+
+                    self.oldState = self.state
+                    self.state = "MainMenu"
+
+                case "UserChange":
+                    print("state: UserChange")
+
+                    numberOfUsers = len(userList.listOfUsers)
+                    
+                    displayedUsers = (0, min(1, numberOfUsers)-1)
+
+                    showNextPageButton = False
+                    showPrevPageButton = False
+
+                    if numberOfUsers > 2:
+                        showNextPageButton = True
+
+                    touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
+                    
+                    while self.state == "UserChange":
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            for region in touchActiveRegions:
+                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+
+                                    if value == "PreviousPage":
+                                        displayedUsers = (displayedUsers(0)-2, displayedUsers(0)-1)
+
+                                    elif value == "NextPage":
+                                        displayedUsers = (displayedUsers(1) + 1, min(displayedUsers(1)+2, numberOfUsers-1))
                                     
-                    
+                                    else:
+                                        self.activeUserID = value
+                                        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
 
-                    
-                     
+                                        self.oldState = self.state
+                                        self.state = "MainMenu"
+                                    
+
+                        asyncio.sleep(0.1)
+            
+            if dataAndFlagContainer.programRunningFlag == False:
+                break                               
+           
         print("End of main loop")
         
 

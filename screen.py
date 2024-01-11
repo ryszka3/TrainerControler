@@ -1,13 +1,12 @@
 
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
+from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
+
 
 #import ILI9341 as TFT
 #import SPI
 #from XPT2046 import Touch
 
-from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram
+from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList
 from workouts  import Workouts
 
 def formatTime(dur: int) -> str:
@@ -801,7 +800,113 @@ class ScreenManager:
             Y_Pos += section_height
 
         return touchActiveRegions
+
+    def drawPageUserSelect(self, userList: UserList, displayRange: tuple, previousEnabled: bool = False, nextEnabled: bool = False) -> tuple:
+        
+        
+        #self.display.clear()
+        #draw = self.display.draw() # Get a PIL Draw object
+        font = ImageFont.load_default(16)
+        draw = ImageDraw.Draw(self.im)
+        
+        triangleWidth = 10
+        triangleHeight = 15
+
+        draw.text(xy=(self.WIDTH/2, self.MARGIN_LARGE), text="Select User", font=font, anchor="mm", fill=self.COLOUR_TEXT_LIGHT)
+        
+        draw = ImageDraw.Draw(self.im)
+        touchActiveRegions = tuple()
+
+        if previousEnabled == True:
+
+            prev_y = 40
+            triangle_xy = (self.MARGIN_LARGE+triangleWidth/2, prev_y, 
+                           self.MARGIN_LARGE, prev_y+triangleHeight,
+                           self.MARGIN_LARGE+triangleWidth, prev_y+triangleHeight)
+
+            draw.polygon(xy=triangle_xy, outline=self.COLOUR_OUTLINE, width=1, fill=self.COLOUR_BUTTON)
             
+            triangle_touchbox_xy = (triangle_xy[2], triangle_xy[1], triangle_xy[4], triangle_xy[5])
+            
+            touchActiveRegions += ((triangle_touchbox_xy, "PreviousPage"),)
+        
+        if nextEnabled== True:
+            
+            next_y = 190
+            triangle_xy = (self.MARGIN_LARGE, next_y,
+                           self.MARGIN_LARGE+triangleWidth, next_y,
+                           self.MARGIN_LARGE+triangleWidth/2, next_y+triangleHeight)
+            
+            draw.polygon(xy=triangle_xy, outline=self.COLOUR_OUTLINE, width=1, fill=self.COLOUR_BUTTON)
+
+            triangle_touchbox_xy = (triangle_xy[0], triangle_xy[1], triangle_xy[2], triangle_xy[5])
+            
+            touchActiveRegions += ((triangle_touchbox_xy, "NextPage"),)
+
+        BOX_X = 40
+        box_y = 35
+        
+        box_width = self.WIDTH - 2 * box_y
+        BOX_HEIGHT = 80
+        PICTURE_WH = 40
+
+        for i in range(displayRange[0], displayRange[1]+1):
+
+            if i > len(userList.listOfUsers) - 1:
+                break
+
+            box_xy = (BOX_X, box_y, BOX_X+box_width, box_y+BOX_HEIGHT)
+            draw.rounded_rectangle(xy=box_xy, fill=self.COLOUR_BG_LIGHT, radius=5)
+            touchActiveRegions += ((box_xy, i),)
+            
+            try:
+                image = Image.open(userList.listOfUsers[i].picture)
+            except:
+                try:
+                    image = Image.open("nopicture.png")
+                except:
+                    image = Image.new("RGB",(65,60), self.COLOUR_BG)
+            
+            imageRatio = image.width/image.height
+            targetHeight = 60
+            image = image.resize((int(imageRatio*targetHeight), int(targetHeight)))
+
+            self.im.paste(image, (BOX_X+10, box_y+10))
+
+            pos_x = BOX_X+80
+            pos_y = box_y + 40
+            font=ImageFont.load_default(14)
+
+            draw.text(xy=(pos_x, box_y+16), text=userList.listOfUsers[i].Name, font=font, anchor="lm", fill=self.COLOUR_FILL)
+
+            font=ImageFont.load_default(9)
+
+            labels_col1 = ("Times riden: ", "Total Distance:", "Total Energy:")
+            values_col1 = (userList.listOfUsers[i].noWorkouts, userList.listOfUsers[i].totalDistance, userList.listOfUsers[i].totalEnergy)
+
+            for label, value in zip(labels_col1, values_col1):
+                draw.text(xy=(pos_x, pos_y), text=label, fill=self.COLOUR_FILL, anchor="lm", font=font)
+                draw.text(xy=(pos_x+65, pos_y), text=str(value), fill=self.COLOUR_OUTLINE, font=font, anchor="lm")
+                pos_y += 12
+            
+            pos_y = box_y + 40
+            pos_x += 100
+
+            labels_col2 = ("FTP:", "Max HR:")
+            values_col2 = (userList.listOfUsers[i].FTP, userList.listOfUsers[i].Max_HR)
+
+            for label, value in zip(labels_col2, values_col2):
+                draw.text(xy=(pos_x, pos_y), text=label, fill=self.COLOUR_FILL, anchor="lm", font=font)
+                draw.text(xy=(pos_x+40, pos_y), text=str(value), fill=self.COLOUR_OUTLINE, font=font, anchor="lm")
+                pos_y += 12
+
+
+            box_y += BOX_HEIGHT+20
+        self.im.show()
+
+        return touchActiveRegions
+
+
     #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
     def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
         #self.display.clear()
@@ -1006,5 +1111,8 @@ if __name__ == "__main__":
 
     #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
     #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)
-    lcd.drawPageCalibration((20,20))
+    #lcd.drawPageCalibration((20,20))
     #lcd.drawPageSettings()
+    from datatypes import UserList
+    my=UserList()
+    lcd.drawPageUserSelect(userList=my, displayRange=(0,1), previousEnabled=True, nextEnabled=True)

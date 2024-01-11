@@ -107,7 +107,8 @@ class WorkoutManager():
         self.lastSaveTime: float = 0
         self.queue = queue.SimpleQueue()
         self.workouts = Workouts()
-        self.dataContainer: DataContainer = None
+        self.dataContainer = DataContainer()
+        self.SAVEPERIOD = float(1.0)
 
     def numberOfWorkoutPrograms(self) -> int:
         return len(self.workouts.listOfWorkouts)
@@ -138,6 +139,8 @@ class WorkoutManager():
                         print("Starting program no: ", entry.data)
                         self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
                         self.dataContainer.workoutDuration = self.currentWorkout.getParameters().totalDuration
+                        self.dataContainer.distance = 0
+                        self.dataContainer.totalEnergy = 0
                         self.state = "WARMUP-PROGRAM"
                     
                     elif entry.type == "Freeride":
@@ -169,7 +172,9 @@ class WorkoutManager():
                         continue
 
                     try:
-                        workout_logfile = open(datetime.datetime.now().strftime("Workouts/Workout-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
+                        
+                        path = "Workouts/" + str(self.dataContainer.activeUser.Name)
+                        workout_logfile = open(datetime.datetime.now().strftime(path + "/Workout-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
                         csvWriter = csv.writer(workout_logfile, dialect='excel')
                         csvWriter.writerow(list(("Workout log file","")))
                         csvWriter.writerow(list(("Created:",
@@ -249,10 +254,12 @@ class WorkoutManager():
                 self.dataContainer.currentSegment.elapsedTime = time.time() - self.dataContainer.currentSegment.startTime
                 self.dataContainer.workoutTime  = time.time() - self.workoutStartTime
 
-                if self.dataContainer.workoutTime - self.lastSaveTime > 1.0:   # 
+                if self.dataContainer.workoutTime - self.lastSaveTime > self.SAVEPERIOD:   # 
                     
                     self.lastSaveTime = self.dataContainer.workoutTime
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
+                    self.dataContainer.distance += self.dataContainer.momentary.speed * self.SAVEPERIOD / 3600 # km
+                    self.dataContainer.totalEnergy += self.dataContainer.momentary.power * self.SAVEPERIOD / 1000 # kJ
                 
                 await asyncio.sleep(0.01)
         

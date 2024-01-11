@@ -2,13 +2,20 @@
     {
         "Name": "Michal",
         "YearOfBirth": 1988,
-        "FTP": 120
+        "FTP": 120,
+        "noWorkouts": 3,
+        "totDistance": 127.4,
+        "totEnergy": 11524,
+        "Picture": "michal.png"
     },
     {
         "Name": "Lily",
         "YearOfBirth": 1988,
-        "FTP": 100
+        "FTP": 100,
+        "noWorkouts": 0,
+        "totDistance": 0,
+        "totEnergy": 0,
+        "Picture": "lily.png"
     }
+
 ]
-
-
