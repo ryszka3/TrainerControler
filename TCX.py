@@ -79,7 +79,7 @@ class TXCWriter:
         lap.maximumSpeed  =43
         lap.maxHRValue = 134
         lap.averageHRValue = 110
-        
+
 
 
     def addTrackPoint(self, distance, data: Dataset, LapID=None):
@@ -125,19 +125,4 @@ class TXCWriter:
         with open(filename, "wt") as file:
             file.write(xmlstr)
 
-
-
-
-my = TXCWriter()
-my.newLap()
-my.listOfLaps[0].trigMethod.text = "snack"
-my.addTrackPoint(1)
-my.addTrackPoint(1)
-
-
-my.newLap()
-my.addTrackPoint(1)
-my.addTrackPoint(1)
-my.addTrackPoint(1)
-my.saveToFile("wk.tcx")
 
