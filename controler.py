@@ -102,371 +102,370 @@ class Supervisor:
         lcd.assignDataContainer(dataAndFlagContainer)
         
         while True:     #### Main loop
-            match self.state:
-                case "MainMenu":
-                    print("state: Main menu")
-                    touchActiveRegions = lcd.drawPageMainMenu()
-                    loopCounter: int = 0
-                    MAX_COUNT = 14
-                    while self.state == "MainMenu":
-                        
-                        heartFillColour = lcd.COLOUR_HEART
-                        if device_heartRateSensor.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
-                            heartFillColour = lcd.COLOUR_BG_LIGHT
-                            device_heartRateSensor.connect = True  ## Maintain this flag true to continue to try to connect   
-
-                        TTFillColour = lcd.COLOUR_TT
-                        if device_turboTrainer.connectionState == False and loopCounter < MAX_COUNT / 2 - 1:
-                            TTFillColour = lcd.COLOUR_BG_LIGHT
-                            device_turboTrainer.connect = True  ## Maintain this flag true to continue to try to connect  
-
-                        #ClimberFillColour = lcd.COLOUR_CLIMBER
-                        #if device_climber.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
-                        #    ClimberFillColour = lcd.COLOUR_BG_LIGHT
-                        #    device_climber.connect = True  ## Maintain this flag true to continue to try to connect  
-
-                        touch, location = touchScreen.checkTouch()
-                        if touch == True:
-                            for region in touchActiveRegions:
-                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                    self.oldState = self.state
-                                    self.state = value
-                        
-                        if self.state in ("RideProgram", "Freeride") and device_turboTrainer.connectionState == False:
-                            #### no TT connection, display error message, cancel state change
-                            lcd.drawConnectionErrorMessage()
-                            self.state == "MainMenu"
-                            asyncio.sleep(4.0)
-                        else:
-                            lcd.drawPageMainMenu(heartFillColour, TTFillColour)
-                        
-                        loopCounter = (loopCounter + 1) % MAX_COUNT
-                        asyncio.sleep(0.1)
-
-                case "RideProgram":
-
-                    if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
-                        self.oldState = "RideProgram"
-                        self.state = "ProgSelect"
-                        break
-                    else:
-                        if device_heartRateSensor.connectionState == True:
-                            device_heartRateSensor.subscribeToService()
-                        if device_turboTrainer.connectionState == True:
-                            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-                        #### if coming from prog select then start the workout
-                        touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
-                        workoutManager.startWorkout(self.selectedProgram)
-                        await asyncio.sleep(2)
-                        while workoutManager.state != "IDLE":
-                            touch, location = touchScreen.checkTouch()
-                            if touch == True:
-                                for region in touchActiveRegions:
-                                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                        
-                                        if value == "End":
-                                            ## do end of program routines
-                                            workoutManager.queue.put(QueueEntry("End", 0))
-                                            device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
-
-                                            ## then go to the main menu
-                                            self.state = "MainMenu"
-                                            break
-
-                                        elif workoutManager.state in ("PROGRAM", "FREERIDE"):
-                                            workoutManager.queue.put(QueueEntry("Pause", 0))
-
-                                        else:
-                                            workoutManager.queue.put(QueueEntry("Start", 0))
-
-                            lcd.drawPageWorkout("Program", workoutManager.state)
-                            asyncio.sleep(0.1)
-                        #### program has ended
-                        
-                        userList.updateUserRecord(userID=self.activeUserID,
-                                                  noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
-                                                  distance = dataAndFlagContainer.distance,
-                                                  energy = dataAndFlagContainer.totalEnergy)
-
-                        
-                case "ProgEdit":
-
-                    if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
-                        self.oldState = "ProgEdit"
-                        self.state = "ProgSelect"
-                        break
-                    else:
-                        #### if coming from prog select then start the editor
-                        
-                        if self.selectedProgram is not None:
-                            editedWorkoutProgram = workoutManager.workouts.getWorkout(self.selectedProgram)
-                        else:
-                            editedWorkoutProgram, self.selectedProgram = workoutManager.workouts.newWorkout()
-                        
-                        editedSegment = WorkoutSegment()
-                        selectedSegmentID = None
-                        touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                        
-                        while self.state == "ProgEdit":
-                            
-                            touch, location = touchScreen.checkTouch()
-                            if touch == True:
-                                for region in touchActiveRegions:
-                                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                        
-                                        if value in ("Power", "Level"):
-                                            editedSegment.segmentType = value
-
-                                        elif value in ("- 50", "- 5", "+ 5", "+ 50"):
-                                            editedSegment.setting += int(str(value).replace(" ", ""))
-                                            #editedSegment.setting = min, max
-
-                                        elif value in ("-10m", "-1m", "+1m", "+10m"):
-                                            editedSegment.duration += int(str(value).replace("m","")) * 60
-
-                                        elif value in ("-10s", "+10s"):
-                                            editedSegment.duration += int(str(value).replace("m","")) * 1
-
-                                        elif value in range(0, 999):    ## clicked on a segments chart
-                                            selectedSegmentID = value
-                                            editedSegment = editedWorkoutProgram.segments[selectedSegmentID].copy()  ## load segment to editor
-                                        
-                                        elif value == "Insert":
-                                            editedWorkoutProgram.insertSegment(selectedSegmentID, editedSegment)
-
-                                        elif value == "Add":
-                                            editedWorkoutProgram.appendSegment(editedSegment)
-
-                                            ## reset edited seg and pointer
-                                            editedSegment = WorkoutSegment()
-                                            selectedSegmentID = None
-
-                                        elif value == "Update":
-                                            editedWorkoutProgram.insertSegment(selectedSegmentID, editedSegment)
-                                            
-                                            ## reset edited seg and pointer
-                                            editedSegment = WorkoutSegment()
-                                            selectedSegmentID = None
-
-                                        elif value == "Remove":
-                                            editedWorkoutProgram.removeSegment(selectedSegmentID)
-
-                                            # reset edited seg and pointer
-                                            editedSegment = WorkoutSegment()
-                                            selectedSegmentID = None
-
-                                        elif value == "Finish":
-                                            touchActiveRegions = lcd.drawMessageBox("Finish editing?", ["Save", "Discard", "Cancel"])
-                                            while True:
-                                                touch, location = touchScreen.checkTouch()
-                                                if touch == True:
-                                                    for region in touchActiveRegions:
-                                                        boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                                        if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                        
-                                                            if value == "Save":
-                                                                workoutManager.workouts.saveToFile()
-                                                                self.state = "MainMenu"
-                                                                break
-
-                                                            elif value == "Discard":
-                                                                workoutManager.workouts.reloadFromFile()
-                                                                self.state = "MainMenu"
-                                                                break
-
-                                                            elif value == "Cancel":
-                                                                break
-                                                    else:
-                                                        continue    #### if the "for" loop was not broken (i.e. not a valid touch), go to the next iteration of the while loop
-                                                    
-                                                    break   ## exits while loop if clicked on a valid button
-
-                                                asyncio.sleep(0.1)
-
-
-                                touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                            asyncio.sleep(0.1)
-
-                case "ProgSelect":
+            if self.state == "MainMenu":
+                print("state: Main menu")
+                touchActiveRegions = lcd.drawPageMainMenu()
+                loopCounter: int = 0
+                MAX_COUNT = 14
+                while self.state == "MainMenu":
                     
-                    numberOfWorkoutPrograms = workoutManager.numberOfWorkoutPrograms()
-                    
-                    displayedPrograms = (0, min(4, numberOfWorkoutPrograms)-1)
-                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
+                    heartFillColour = lcd.COLOUR_HEART
+                    if device_heartRateSensor.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
+                        heartFillColour = lcd.COLOUR_BG_LIGHT
+                        device_heartRateSensor.connect = True  ## Maintain this flag true to continue to try to connect   
 
-                    showNextPageButton = False
-                    showPrevPageButton = False
-                    showNewProgramButton = False
+                    TTFillColour = lcd.COLOUR_TT
+                    if device_turboTrainer.connectionState == False and loopCounter < MAX_COUNT / 2 - 1:
+                        TTFillColour = lcd.COLOUR_BG_LIGHT
+                        device_turboTrainer.connect = True  ## Maintain this flag true to continue to try to connect  
 
-                    if numberOfWorkoutPrograms > 4:
-                        showNextPageButton = True
+                    #ClimberFillColour = lcd.COLOUR_CLIMBER
+                    #if device_climber.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
+                    #    ClimberFillColour = lcd.COLOUR_BG_LIGHT
+                    #    device_climber.connect = True  ## Maintain this flag true to continue to try to connect  
 
-                    if self.oldState == "ProgEdit":
-                        showNewProgramButton = True
-
-                    touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
-                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-
-                    while self.state == "ProgSelect":
-                        touch, location = touchScreen.checkTouch()
-                        if touch == True:
-                            for region in touchActiveRegions:
-                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-
-                                    if value == "NextPage":
-                                        displayedPrograms = (displayedPrograms(1) + 1, min(displayedPrograms(1)+4, numberOfWorkoutPrograms-1))
-
-                                    elif value == "PreviousPage":
-                                        displayedPrograms = (displayedPrograms(0)-4, displayedPrograms(0)-1)
-
-                                    elif value == "NewProgram":
-                                        self.selectedProgram = None
-                                        self.state = self.oldState
-                                        self.oldState = "ProgSelect"
-                                        break   ## break the loop, skip new page drawing
-
-                                    else:
-                                        self.selectedProgram = value
-                                        ## then go back to the correct state
-                                        self.state = self.oldState
-                                        self.oldState = "ProgSelect"
-                                        break   ## break the loop, skip new page drawing
-
-                                    if displayedPrograms[0] > 0:
-                                        showPrevPageButton = True
-                                    else:
-                                        showPrevPageButton = False
-
-                                    if displayedPrograms[1] < numberOfWorkoutPrograms:
-                                        showNextPageButton = True
-                                    else:
-                                        showNextPageButton = False
-
-                                    workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
-                                    touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
-                                                                    nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-                                    
-                        asyncio.sleep(0.1)
-
-                case "Settings":
-                    print("state: Settings")
-                    touchActiveRegions = lcd.drawPageSettings()
-                    
-                    while self.state == "Settings":
-                        touch, location = touchScreen.checkTouch()
-                        if touch == True:
-                            for region in touchActiveRegions:
-                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-
-                                    self.oldState = self.state
-                                    self.state = value
-                                    break
-
-                        asyncio.sleep(0.1)
-
-                case "Calibrate":    ## screen alibration
-
-                    print("state: Calibrate")
-                    point1 = (20,20)
-                    point2 = (300,220)
-                    measuredP1 = None
-                    measuredP2 = None
-                    lcd.drawPageCalibration(point1)
-                    
-                    while self.state == "Calibrate":
-                        touch, location = touchScreen.checkTouch()
-                        if touch == True:
-                            if measuredP1 is None: # first point 
-                                measuredP1 = location
-                                lcd.drawPageCalibration(point2)
-
-                            else:
-                                measuredP2 = location
-                                # both points acquired,  now do calculation:
-                                calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
-                                                                                        measuredPoints= (measuredP1, measuredP2))
-                                
-                                config.set("TouchScreen", "x_multiplier", str(calibration[0]))
-                                config.set("TouchScreen", "x_offset",     str(calibration[1]))
-                                config.set("TouchScreen", "y_multiplier", str(calibration[2]))
-                                config.set("TouchScreen", "y_offset",     str(calibration[3]))
-                                
-                                with open('config.ini', 'wt') as file:
-                                    config.write(file)
-
-                                lcd.drawMessageBox("Calibration applied!", ("OK",))
+                    touch, location = touchScreen.checkTouch()
+                    if touch == True:
+                        for region in touchActiveRegions:
+                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                                 self.oldState = self.state
-                                self.state = "MainMenu"
-                                asyncio.sleep(3)
-
-                        asyncio.sleep(0.1)    
-
-                case "Trainer":
-                    print("state: Trainer")
-
-                    self.oldState = self.state
-                    self.state = "MainMenu"
-                                        
-                case "HRMonitor":
-                    print("state: HRMonitor")
-
-                    self.oldState = self.state
-                    self.state = "MainMenu"
-                                        
-                case "Climbr":
-                    print("state: Climbr")
-
-                    self.oldState = self.state
-                    self.state = "MainMenu"
-
-                case "History":
-                    print("state: History")
-
-                    self.oldState = self.state
-                    self.state = "MainMenu"
-
-                case "UserChange":
-                    print("state: UserChange")
-
-                    numberOfUsers = len(userList.listOfUsers)
+                                self.state = value
                     
-                    displayedUsers = (0, min(1, numberOfUsers)-1)
-
-                    showNextPageButton = False
-                    showPrevPageButton = False
-
-                    if numberOfUsers > 2:
-                        showNextPageButton = True
-
-                    touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
+                    if self.state in ("RideProgram", "Freeride") and device_turboTrainer.connectionState == False:
+                        #### no TT connection, display error message, cancel state change
+                        lcd.drawConnectionErrorMessage()
+                        self.state == "MainMenu"
+                        asyncio.sleep(4.0)
+                    else:
+                        lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
-                    while self.state == "UserChange":
+                    loopCounter = (loopCounter + 1) % MAX_COUNT
+                    asyncio.sleep(0.1)
+
+            if self.state == "RideProgram":
+
+                if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
+                    self.oldState = "RideProgram"
+                    self.state = "ProgSelect"
+                    break
+                else:
+                    if device_heartRateSensor.connectionState == True:
+                        device_heartRateSensor.subscribeToService()
+                    if device_turboTrainer.connectionState == True:
+                        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+                    #### if coming from prog select then start the workout
+                    touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+                    workoutManager.startWorkout(self.selectedProgram)
+                    await asyncio.sleep(2)
+                    while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
                             for region in touchActiveRegions:
                                 boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                                 if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-
-                                    if value == "PreviousPage":
-                                        displayedUsers = (displayedUsers(0)-2, displayedUsers(0)-1)
-
-                                    elif value == "NextPage":
-                                        displayedUsers = (displayedUsers(1) + 1, min(displayedUsers(1)+2, numberOfUsers-1))
                                     
-                                    else:
-                                        self.activeUserID = value
-                                        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+                                    if value == "End":
+                                        ## do end of program routines
+                                        workoutManager.queue.put(QueueEntry("End", 0))
+                                        device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
 
-                                        self.oldState = self.state
+                                        ## then go to the main menu
                                         self.state = "MainMenu"
-                                    
+                                        break
 
+                                    elif workoutManager.state in ("PROGRAM", "FREERIDE"):
+                                        workoutManager.queue.put(QueueEntry("Pause", 0))
+
+                                    else:
+                                        workoutManager.queue.put(QueueEntry("Start", 0))
+
+                        lcd.drawPageWorkout("Program", workoutManager.state)
                         asyncio.sleep(0.1)
+                    #### program has ended
+                    
+                    userList.updateUserRecord(userID=self.activeUserID,
+                                                noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
+                                                distance = dataAndFlagContainer.distance,
+                                                energy = dataAndFlagContainer.totalEnergy)
+
+                    
+            if self.state == "ProgEdit":
+
+                if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
+                    self.oldState = "ProgEdit"
+                    self.state = "ProgSelect"
+                    break
+                else:
+                    #### if coming from prog select then start the editor
+                    
+                    if self.selectedProgram is not None:
+                        editedWorkoutProgram = workoutManager.workouts.getWorkout(self.selectedProgram)
+                    else:
+                        editedWorkoutProgram, self.selectedProgram = workoutManager.workouts.newWorkout()
+                    
+                    editedSegment = WorkoutSegment()
+                    selectedSegmentID = None
+                    touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
+                    
+                    while self.state == "ProgEdit":
+                        
+                        touch, location = touchScreen.checkTouch()
+                        if touch == True:
+                            for region in touchActiveRegions:
+                                boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                    
+                                    if value in ("Power", "Level"):
+                                        editedSegment.segmentType = value
+
+                                    elif value in ("- 50", "- 5", "+ 5", "+ 50"):
+                                        editedSegment.setting += int(str(value).replace(" ", ""))
+                                        #editedSegment.setting = min, max
+
+                                    elif value in ("-10m", "-1m", "+1m", "+10m"):
+                                        editedSegment.duration += int(str(value).replace("m","")) * 60
+
+                                    elif value in ("-10s", "+10s"):
+                                        editedSegment.duration += int(str(value).replace("m","")) * 1
+
+                                    elif value in range(0, 999):    ## clicked on a segments chart
+                                        selectedSegmentID = value
+                                        editedSegment = editedWorkoutProgram.segments[selectedSegmentID].copy()  ## load segment to editor
+                                    
+                                    elif value == "Insert":
+                                        editedWorkoutProgram.insertSegment(selectedSegmentID, editedSegment)
+
+                                    elif value == "Add":
+                                        editedWorkoutProgram.appendSegment(editedSegment)
+
+                                        ## reset edited seg and pointer
+                                        editedSegment = WorkoutSegment()
+                                        selectedSegmentID = None
+
+                                    elif value == "Update":
+                                        editedWorkoutProgram.insertSegment(selectedSegmentID, editedSegment)
+                                        
+                                        ## reset edited seg and pointer
+                                        editedSegment = WorkoutSegment()
+                                        selectedSegmentID = None
+
+                                    elif value == "Remove":
+                                        editedWorkoutProgram.removeSegment(selectedSegmentID)
+
+                                        # reset edited seg and pointer
+                                        editedSegment = WorkoutSegment()
+                                        selectedSegmentID = None
+
+                                    elif value == "Finish":
+                                        touchActiveRegions = lcd.drawMessageBox("Finish editing?", ["Save", "Discard", "Cancel"])
+                                        while True:
+                                            touch, location = touchScreen.checkTouch()
+                                            if touch == True:
+                                                for region in touchActiveRegions:
+                                                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                                                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                                    
+                                                        if value == "Save":
+                                                            workoutManager.workouts.saveToFile()
+                                                            self.state = "MainMenu"
+                                                            break
+
+                                                        elif value == "Discard":
+                                                            workoutManager.workouts.reloadFromFile()
+                                                            self.state = "MainMenu"
+                                                            break
+
+                                                        elif value == "Cancel":
+                                                            break
+                                                else:
+                                                    continue    #### if the "for" loop was not broken (i.e. not a valid touch), go to the next iteration of the while loop
+                                                
+                                                break   ## exits while loop if clicked on a valid button
+
+                                            asyncio.sleep(0.1)
+
+
+                            touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
+                        asyncio.sleep(0.1)
+
+            if self.state == "ProgSelect":
+                
+                numberOfWorkoutPrograms = workoutManager.numberOfWorkoutPrograms()
+                
+                displayedPrograms = (0, min(4, numberOfWorkoutPrograms)-1)
+                workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
+
+                showNextPageButton = False
+                showPrevPageButton = False
+                showNewProgramButton = False
+
+                if numberOfWorkoutPrograms > 4:
+                    showNextPageButton = True
+
+                if self.oldState == "ProgEdit":
+                    showNewProgramButton = True
+
+                touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
+                                                                nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
+
+                while self.state == "ProgSelect":
+                    touch, location = touchScreen.checkTouch()
+                    if touch == True:
+                        for region in touchActiveRegions:
+                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+
+                                if value == "NextPage":
+                                    displayedPrograms = (displayedPrograms(1) + 1, min(displayedPrograms(1)+4, numberOfWorkoutPrograms-1))
+
+                                elif value == "PreviousPage":
+                                    displayedPrograms = (displayedPrograms(0)-4, displayedPrograms(0)-1)
+
+                                elif value == "NewProgram":
+                                    self.selectedProgram = None
+                                    self.state = self.oldState
+                                    self.oldState = "ProgSelect"
+                                    break   ## break the loop, skip new page drawing
+
+                                else:
+                                    self.selectedProgram = value
+                                    ## then go back to the correct state
+                                    self.state = self.oldState
+                                    self.oldState = "ProgSelect"
+                                    break   ## break the loop, skip new page drawing
+
+                                if displayedPrograms[0] > 0:
+                                    showPrevPageButton = True
+                                else:
+                                    showPrevPageButton = False
+
+                                if displayedPrograms[1] < numberOfWorkoutPrograms:
+                                    showNextPageButton = True
+                                else:
+                                    showNextPageButton = False
+
+                                workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
+                                touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
+                                                                nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
+                                
+                    asyncio.sleep(0.1)
+
+            if self.state == "Settings":
+                print("state: Settings")
+                touchActiveRegions = lcd.drawPageSettings()
+                
+                while self.state == "Settings":
+                    touch, location = touchScreen.checkTouch()
+                    if touch == True:
+                        for region in touchActiveRegions:
+                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+
+                                self.oldState = self.state
+                                self.state = value
+                                break
+
+                    asyncio.sleep(0.1)
+
+            if self.state == "Calibrate":    ## screen alibration
+
+                print("state: Calibrate")
+                point1 = (20,20)
+                point2 = (300,220)
+                measuredP1 = None
+                measuredP2 = None
+                lcd.drawPageCalibration(point1)
+                
+                while self.state == "Calibrate":
+                    touch, location = touchScreen.checkTouch()
+                    if touch == True:
+                        if measuredP1 is None: # first point 
+                            measuredP1 = location
+                            lcd.drawPageCalibration(point2)
+
+                        else:
+                            measuredP2 = location
+                            # both points acquired,  now do calculation:
+                            calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
+                                                                                    measuredPoints= (measuredP1, measuredP2))
+                            
+                            config.set("TouchScreen", "x_multiplier", str(calibration[0]))
+                            config.set("TouchScreen", "x_offset",     str(calibration[1]))
+                            config.set("TouchScreen", "y_multiplier", str(calibration[2]))
+                            config.set("TouchScreen", "y_offset",     str(calibration[3]))
+                            
+                            with open('config.ini', 'wt') as file:
+                                config.write(file)
+
+                            lcd.drawMessageBox("Calibration applied!", ("OK",))
+                            self.oldState = self.state
+                            self.state = "MainMenu"
+                            asyncio.sleep(3)
+
+                    asyncio.sleep(0.1)    
+
+            if self.state == "Trainer":
+                print("state: Trainer")
+
+                self.oldState = self.state
+                self.state = "MainMenu"
+                                    
+            if self.state == "HRMonitor":
+                print("state: HRMonitor")
+
+                self.oldState = self.state
+                self.state = "MainMenu"
+                                    
+            if self.state == "Climbr":
+                print("state: Climbr")
+
+                self.oldState = self.state
+                self.state = "MainMenu"
+
+            if self.state == "History":
+                print("state: History")
+
+                self.oldState = self.state
+                self.state = "MainMenu"
+
+            if self.state == "UserChange":
+                print("state: UserChange")
+
+                numberOfUsers = len(userList.listOfUsers)
+                
+                displayedUsers = (0, min(1, numberOfUsers)-1)
+
+                showNextPageButton = False
+                showPrevPageButton = False
+
+                if numberOfUsers > 2:
+                    showNextPageButton = True
+
+                touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
+                
+                while self.state == "UserChange":
+                    touch, location = touchScreen.checkTouch()
+                    if touch == True:
+                        for region in touchActiveRegions:
+                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+
+                                if value == "PreviousPage":
+                                    displayedUsers = (displayedUsers(0)-2, displayedUsers(0)-1)
+
+                                elif value == "NextPage":
+                                    displayedUsers = (displayedUsers(1) + 1, min(displayedUsers(1)+2, numberOfUsers-1))
+                                
+                                else:
+                                    self.activeUserID = value
+                                    dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+
+                                    self.oldState = self.state
+                                    self.state = "MainMenu"
+                                
+
+                    asyncio.sleep(0.1)
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               
