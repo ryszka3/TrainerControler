@@ -2,9 +2,9 @@
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
 
 
-#import ILI9341 as TFT
-#import SPI
-#from XPT2046 import Touch
+import ILI9341 as TFT
+import SPI
+from XPT2046 import Touch
 
 from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList
 from workouts  import Workouts
@@ -39,7 +39,7 @@ class TouchScreen:
         self.WIDTH  = 320
         self.HEIGHT = 240
     
-        #self.touchscreen = Touch(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY))
+        self.touchscreen = Touch(spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY))
         
         self.setCalibration(0.17, -17, 0.17, -17)   # default calibration, to be overwriten with values loaded from config
 
@@ -125,23 +125,24 @@ class ScreenManager:
         self.COLOUR_TT:         tuple = (38,  188, 196)
         self.COLOUR_CLIMBER:    tuple = (32,  140,  20)
 
-        #self.display = TFT.ILI9341(dc     = PIN_DC, 
-         #                          rst    = PIN_RST, 
-          #                         spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
-           #                        width  = self.WIDTH, 
-            #                       height = self.HEIGHT)
-        #self.display.begin()
-        #self.display.clear(self.COLOUR_BG)    # Clear to background
+        self.display = TFT.ILI9341(dc     = PIN_DC, 
+                                   rst    = PIN_RST, 
+                                   spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
+                                   width  = self.WIDTH, 
+                                   height = self.HEIGHT)
+        self.display.begin()
+        self.display.clear(self.COLOUR_BG)    # Clear to background
 
-        self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
+        #self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
 
     def assignDataContainer (self, container: DataContainer):
         self.dataContainer:DataContainer = container
     
 
     def drawPageSettings(self) -> tuple:
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
         font = ImageFont.load_default(14)
 
@@ -190,14 +191,16 @@ class ScreenManager:
             draw.text(xy=button_centre, text=screenLabel, anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
             touchActiveRegions += ((button_xy, touchLabel),)
 
-        self.im.show()
+        #self.im.show()
+        self.display.display()
         return touchActiveRegions
 
     def drawProgramEditor(self, program: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 
         
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        #draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
 
         touchActiveRegions = tuple()
@@ -216,7 +219,7 @@ class ScreenManager:
                                                            selectedSegment = selected_segment,
                                                            workoutParams   = program.getParameters())
 
-        self.im.paste(im = chart, box=(self.MARGIN_LARGE, int(self.HEIGHT * 2 / 3)-self.MARGIN_LARGE))
+        self.display.buffer.paste(im = chart, box=(self.MARGIN_LARGE, int(self.HEIGHT * 2 / 3)-self.MARGIN_LARGE))
         
         button_dims = (65, 20)
         
@@ -370,14 +373,20 @@ class ScreenManager:
                 Y_Pos += 16
                 X_Pos -= 3*26
 
+
+        self.display.display()
         return touchActiveRegions
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
         
-        self.im=self.im.convert("L")
-        self.im=self.im.convert("RGB")
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        #self.im=self.im.convert("L")
+        #self.im=self.im.convert("RGB")
+
+        self.display.buffer = self.display.buffer.convert("L")
+        self.display.buffer = self.display.buffer.convert("RGB")
+
+        draw = self.display.draw() # Get a PIL Draw object
+        #draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(12)
         touchActiveRegions = tuple()
         
@@ -412,12 +421,14 @@ class ScreenManager:
             X_pos += buttonLength+marginLength
             touchActiveRegions += ((button_xy, opt),)
 
+        self.display.display()
         return touchActiveRegions
 
     def drawProgramSelector(self, listOfParametres: list, previousEnabled: bool = False, nextEnabled: bool = False, newProgramEnabled: bool = True) -> tuple:
-        #self.display.clear(self.COLOUR_BG)
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        
+        self.display.clear(self.COLOUR_BG)
+        draw = self.display.draw() # Get a PIL Draw object
+        #draw = ImageDraw.Draw(self.im)
         font = ImageFont.load_default(14)
         draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), text = "Select program", fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
 
@@ -577,6 +588,7 @@ class ScreenManager:
 
             X_offset_start += self.WIDTH / 2
 
+        self.display.display()
         return touchActiveRegions
     
 
@@ -632,9 +644,10 @@ class ScreenManager:
         return (image, touchActiveRegions)
 
     def drawPageCalibration(self, point:tuple) -> None:
-        #self.display.clear(self.COLOUR_BG)
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        
+        self.display.clear(self.COLOUR_BG)
+        draw = self.display.draw() # Get a PIL Draw object
+        #draw = ImageDraw.Draw(self.im)
 
         LINE_LENGTH = 6
         GAP = 3
@@ -651,12 +664,14 @@ class ScreenManager:
         draw.text(xy=(self.WIDTH/2, self.HEIGHT/2), text="Touch the screen\nat the indicated spot", 
                   align="center", anchor="mm", fill=self.COLOUR_FILL, font=font)
 
-        self.im.show()
+        self.display.display()
+        #self.im.show()
 
     def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
-        #self.display.clear(self.COLOUR_BG)
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        
+        self.display.clear(self.COLOUR_BG)
+        draw = self.display.draw() # Get a PIL Draw object
+        #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
 
         X_POS_END: int = 180
@@ -799,22 +814,21 @@ class ScreenManager:
             
             Y_Pos += section_height
 
+        self.display.display()
         return touchActiveRegions
 
     def drawPageUserSelect(self, userList: UserList, displayRange: tuple, previousEnabled: bool = False, nextEnabled: bool = False) -> tuple:
         
-        
-        #self.display.clear()
-        #draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear()
+        draw = self.display.draw() # Get a PIL Draw object
         font = ImageFont.load_default(16)
-        draw = ImageDraw.Draw(self.im)
+        #draw = ImageDraw.Draw(self.im)
         
         triangleWidth = 10
         triangleHeight = 15
 
         draw.text(xy=(self.WIDTH/2, self.MARGIN_LARGE), text="Select User", font=font, anchor="mm", fill=self.COLOUR_TEXT_LIGHT)
         
-        draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
 
         if previousEnabled == True:
@@ -902,16 +916,18 @@ class ScreenManager:
 
 
             box_y += BOX_HEIGHT+20
-        self.im.show()
+        
+        self.display.display()
 
         return touchActiveRegions
 
 
     #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
     def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
-        #self.display.clear()
-        #draw = self.display.draw() # Get a PIL Draw object
-        draw = ImageDraw.Draw(self.im)
+        
+        self.display.clear()
+        draw = self.display.draw() # Get a PIL Draw object
+        #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
 
         noBoxes = (3, 2)    # in x and y
@@ -930,10 +946,10 @@ class ScreenManager:
         X_Pos = int(self.MARGIN_LARGE*1.5 + box_width -heartImage.width/2)
 
         #self.display.buffer
-        self.im.paste(heartImage, (X_Pos, Y_Pos))
+        self.display.buffer.paste(heartImage, (X_Pos, Y_Pos))
        
         X_Pos = int(self.WIDTH/2 - trainerImage.width/2) 
-        self.im.paste(trainerImage, (X_Pos, Y_Pos))
+        self.display.buffer.paste(trainerImage, (X_Pos, Y_Pos))
 
         #X_Pos = int(self.MARGIN_LARGE*2.5 + 2*box_width -climberImage.width/2)
         #self.im.paste(climberImage, (X_Pos, Y_Pos))
@@ -960,7 +976,7 @@ class ScreenManager:
                 X_Pos = self.MARGIN_LARGE
                 Y_Pos += box_height + 25
                 
-        self.im.save("mainMenu.png")
+        self.display.display()
         return touchActiveRegions
 
 
@@ -978,8 +994,8 @@ class ScreenManager:
         font = ImageFont.load_default(9)
         draw.text(xy=(WIDTH/2, 47), text="Power up  or  start  pedalling\nto  wake up  the  trainer", anchor="mm", font=font, align="center")
 
-        #self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
-        #self.display.display()
+        self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
+        self.display.display()
 
     def drawTrainer(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
         
@@ -988,9 +1004,6 @@ class ScreenManager:
         
         image = Image.new('RGB', (width, height), colour_bg)
         draw = ImageDraw.Draw(image)
-
-        X_pos_offset = -1
-        Y_pos_offset = -1
 
         stroke_wide = max(3, int(1/10 * height))
         stroke_narrow = max(1, int(3/50 * height))
