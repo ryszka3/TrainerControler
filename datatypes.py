@@ -65,7 +65,8 @@ class UserList:
 
         for entry in json_data:
             maxhr = 220 - int(datetime.datetime.now().strftime("%Y")) + entry["YearOfBirth"]
-            record = User(entry["Name"], entry["YearOfBirth"], maxhr, entry["FTP"], entry["noWorkouts"], entry["totDistance"], entry["totEnergy"], entry["Picture"])
+            record = User(entry["Name"], entry["YearOfBirth"], maxhr, entry["FTP"], 
+                          entry["noWorkouts"], entry["totDistance"], entry["totEnergy"], entry["Picture"])
             self.listOfUsers.append(record)
 
     def updateUserRecord(self, userID: int, noWorkouts: int, distance: float, energy: float):
