@@ -4,8 +4,9 @@ import datetime
 import time
 import csv
 import asyncio
-from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment, WorkoutParameters
+from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
 from   BLE_Device  import FitnessMachine
+from   TCX         import TXCWriter
 
 
 class Workouts:
@@ -109,6 +110,10 @@ class WorkoutManager():
         self.workouts = Workouts()
         self.dataContainer = DataContainer()
         self.SAVEPERIOD = float(1.0)
+        self.writeToTCX: bool = True
+        self.filename = None
+        self.TCX_Object: TXCWriter = None
+
 
     def numberOfWorkoutPrograms(self) -> int:
         return len(self.workouts.listOfWorkouts)
@@ -171,10 +176,11 @@ class WorkoutManager():
                         self.state = "STOP"
                         continue
 
+                    path = "Workouts/" + str(self.dataContainer.activeUser.Name)
+                    self.filename = datetime.datetime.now().strftime(path + "/Workout-%y-%m-%d-(%Hh%Mm%S)")
+
                     try:
-                        
-                        path = "Workouts/" + str(self.dataContainer.activeUser.Name)
-                        workout_logfile = open(datetime.datetime.now().strftime(path + "/Workout-%y-%m-%d-(%Hh%Mm%S).csv"), 'w+', newline='')
+                        workout_logfile = open(self.filename+".csv", 'w+', newline='')
                         csvWriter = csv.writer(workout_logfile, dialect='excel')
                         csvWriter.writerow(list(("Workout log file","")))
                         csvWriter.writerow(list(("Created:",
@@ -183,10 +189,14 @@ class WorkoutManager():
                                                 datetime.datetime.now().strftime("%X")                                                
                                                 )))
                         csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
-                        print("Workout data file created")
+                        print("Workout data file (CSV) created")
                     
                     except:
                         raise Exception("Failed creating a workout data file!")
+                    
+                    if self.writeToTCX == True:
+                        self.TCX_Object = TXCWriter()
+                        self.TCX_Object.newLap()
                     
                 else:
                     await asyncio.sleep(0.1)
@@ -240,6 +250,11 @@ class WorkoutManager():
                             self.dataContainer.currentSegment:WorkoutSegment = self.currentWorkout.segments.pop(0)
                             self.dataContainer.currentSegment.startTime = time.time()
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
+                            
+                            if self.writeToTCX == True:
+                                self.TCX_Object.updateLapValues("New params here")
+                                self.TCX_Object.newLap()
+                            
                             print("new segment, type:", self.dataContainer.currentSegment.segmentType, 
                                   " Duration: ", self.dataContainer.currentSegment.duration,
                                   " Setting: ", self.dataContainer.currentSegment.setting,
@@ -260,18 +275,28 @@ class WorkoutManager():
                     csvWriter.writerow(self.dataContainer.getIterableRecord())
                     self.dataContainer.distance += self.dataContainer.momentary.speed * self.SAVEPERIOD / 3600 # km
                     self.dataContainer.totalEnergy += self.dataContainer.momentary.power * self.SAVEPERIOD / 1000 # kJ
+
+                    if self.writeToTCX == True:
+                        self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance, data=self.dataContainer.momentary)
                 
                 await asyncio.sleep(0.01)
         
             if self.state == "STOP":
                 print("Ending  program")
-                #### Closing the logfile ####
+                #### Closing the cvs logfile ####
                 try:
                     csvWriter.writerow(self.dataContainer.getIterableAverages())
                     csvWriter.writerow(self.dataContainer.getIterableMaximums())
                     workout_logfile.close()
                 except:
                     pass
+
+                ####  Writing TCX file
+
+                if self.writeToTCX == True:
+                    self.TCX_Object.saveToFile(self.filename+".tcx")
+                    self.TCX_Object = None
+
 
                 ##### reset variables and the state machine #####
                 self.state = "IDLE"

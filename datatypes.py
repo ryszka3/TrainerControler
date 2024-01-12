@@ -7,6 +7,20 @@ from collections import namedtuple
 
 WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
 
+class TCXLap:
+    def __init__(self) -> None:
+        self.lap = None
+        self.totalTimeSeconds = None
+        self.distanceMeters = None
+        self.maximumSpeed = None
+        self.calories = None
+        self.averageHR = None
+        self.averageHRValue = None
+        self.maxHR = None
+        self.maxHRValue = None
+        self.intensity = None
+        self.trigMethod = None
+        self.track = None
 
 class User:
     def __init__(self, name, yob, maxhr, FTP, noWorkouts, totalDistance, totalEnergy, picture: str) -> None:
