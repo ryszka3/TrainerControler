@@ -145,7 +145,6 @@ class ScreenManager:
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
         font = ImageFont.load_default(14)
-
         buttonWidth = 110
         buttonHeight = 70
         Xmargin = (self.WIDTH - 2 * buttonWidth) / 3
