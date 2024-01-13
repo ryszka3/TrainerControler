@@ -138,8 +138,8 @@ class Supervisor:
                         lcd.drawConnectionErrorMessage()
                         self.state == "MainMenu"
                         await asyncio.sleep(4.0)
-                    else:
-                        lcd.drawPageMainMenu(heartFillColour, TTFillColour)
+                    
+                    lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
                     loopCounter = (loopCounter + 1) % MAX_COUNT
                     await asyncio.sleep(0.1)
