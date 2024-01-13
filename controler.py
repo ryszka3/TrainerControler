@@ -435,7 +435,7 @@ class Supervisor:
                 numberOfUsers = len(userList.listOfUsers)
                 
                 displayedUsers = (0, min(1, numberOfUsers)-1)
-
+                print("displaying users:", displayedUsers," out of: ", numberOfUsers)
                 showNextPageButton = False
                 showPrevPageButton = False
 
@@ -447,6 +447,7 @@ class Supervisor:
                 while self.state == "UserChange":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("touch!")
                         for region in touchActiveRegions:
                             boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                             if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
