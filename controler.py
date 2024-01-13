@@ -104,7 +104,7 @@ class Supervisor:
         while True:     #### Main loop
             if self.state == "MainMenu":
                 print("state: Main menu")
-                touchActiveRegions = lcd.drawPageMainMenu()
+                touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
                 loopCounter: int = 0
                 MAX_COUNT = 14
                 while self.state == "MainMenu":
@@ -136,12 +136,12 @@ class Supervisor:
                         #### no TT connection, display error message, cancel state change
                         lcd.drawConnectionErrorMessage()
                         self.state == "MainMenu"
-                        asyncio.sleep(4.0)
+                        await asyncio.sleep(4.0)
                     else:
                         lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
                     loopCounter = (loopCounter + 1) % MAX_COUNT
-                    asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
 
             if self.state == "RideProgram":
 
@@ -181,7 +181,7 @@ class Supervisor:
                                         workoutManager.queue.put(QueueEntry("Start", 0))
 
                         lcd.drawPageWorkout("Program", workoutManager.state)
-                        asyncio.sleep(0.1)
+                        await asyncio.sleep(0.1)
                     #### program has ended
                     
                     userList.updateUserRecord(userID=self.activeUserID,
@@ -283,11 +283,11 @@ class Supervisor:
                                                 
                                                 break   ## exits while loop if clicked on a valid button
 
-                                            asyncio.sleep(0.1)
+                                            await asyncio.sleep(0.1)
 
 
                             touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                        asyncio.sleep(0.1)
+                        await asyncio.sleep(0.1)
 
             if self.state == "ProgSelect":
                 
@@ -349,7 +349,7 @@ class Supervisor:
                                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
                                 
-                    asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
 
             if self.state == "Settings":
                 print("state: Settings")
@@ -366,7 +366,7 @@ class Supervisor:
                                 self.state = value
                                 break
 
-                    asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
 
             if self.state == "Calibrate":    ## screen alibration
 
@@ -401,9 +401,9 @@ class Supervisor:
                             lcd.drawMessageBox("Calibration applied!", ("OK",))
                             self.oldState = self.state
                             self.state = "MainMenu"
-                            asyncio.sleep(3)
+                            await asyncio.sleep(3)
 
-                    asyncio.sleep(0.1)    
+                    await asyncio.sleep(0.1)    
 
             if self.state == "Trainer":
                 print("state: Trainer")
@@ -466,7 +466,7 @@ class Supervisor:
                                     self.state = "MainMenu"
                                 
 
-                    asyncio.sleep(0.1)
+                    await asyncio.sleep(0.1)
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               
