@@ -90,7 +90,10 @@ class TouchScreen:
     def checkTouch(self) -> tuple:
         rawTouch = self.touchscreen.get_touch()
 
-        if rawTouch[1] > 2000:
+        if rawTouch is None:
+            return (False, (0,0))
+        
+        elif rawTouch[1] > 2000:
             return (False, (0,0))
             
         else:

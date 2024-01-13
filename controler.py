@@ -126,6 +126,7 @@ class Supervisor:
 
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("Touch! ", location)
                         for region in touchActiveRegions:
                             boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                             if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
@@ -161,6 +162,7 @@ class Supervisor:
                     while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
+                            print("Touch! ", location)
                             for region in touchActiveRegions:
                                 boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                                 if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
@@ -212,6 +214,7 @@ class Supervisor:
                         
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
+                            print("Touch! ", location)
                             for region in touchActiveRegions:
                                 boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                                 if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
@@ -312,6 +315,7 @@ class Supervisor:
                 while self.state == "ProgSelect":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("Touch! ", location)
                         for region in touchActiveRegions:
                             boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                             if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
@@ -358,6 +362,7 @@ class Supervisor:
                 while self.state == "Settings":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("Touch! ", location)
                         for region in touchActiveRegions:
                             boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                             if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
@@ -380,6 +385,7 @@ class Supervisor:
                 while self.state == "Calibrate":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("Touch! ", location)
                         if measuredP1 is None: # first point 
                             measuredP1 = location
                             lcd.drawPageCalibration(point2)
@@ -434,7 +440,7 @@ class Supervisor:
 
                 numberOfUsers = len(userList.listOfUsers)
                 
-                displayedUsers = (0, min(1, numberOfUsers)-1)
+                displayedUsers = (0, min(2, numberOfUsers)-1)
                 print("displaying users:", displayedUsers," out of: ", numberOfUsers)
                 showNextPageButton = False
                 showPrevPageButton = False
