@@ -974,7 +974,7 @@ class ScreenManager:
             
             font = ImageFont.truetype(font=self.font_name, size=12)
             box_centre_xy = (box_xy[0] + box_width / 2, box_xy[1] + box_height / 2)
-            draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_LIGHT, font = font, align="center", anchor="mm")
+            draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_DARK, font = font, align="center", anchor="mm")
             
             X_Pos += box_width + 12
 
@@ -1000,7 +1000,7 @@ class ScreenManager:
         font = ImageFont.truetype(font=self.font_name, size=9)
         draw.text(xy=(WIDTH/2, 47), text="Power up  or  start  pedalling\nto  wake up  the  trainer", anchor="mm", font=font, align="center")
 
-        self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
+        self.display.buffer.paste(image,(int(self.WIDTH/2), int(self.HEIGHT/5*4)))
         self.display.display()
 
     def drawTrainer(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
