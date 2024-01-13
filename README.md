@@ -1,4 +1,6 @@
-apt-get install git pip
-
-pip install bleak
-sudo raspi-config and enable SPI
+- sudo apt-get update
+- sudo apt-get upgrade
+- sudo apt-get install git pip
+- pip install bleak -> doesnt work, use the below:
+- supo apt-get install python3-bleak python3-pil
+- sudo raspi-config -> enable SPI
