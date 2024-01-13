@@ -144,7 +144,7 @@ class ScreenManager:
         self.display.clear(self.COLOUR_BG) 
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
-        font = ImageFont.load_default(14)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=14)
         buttonWidth = 110
         buttonHeight = 70
         Xmargin = (self.WIDTH - 2 * buttonWidth) / 3
@@ -200,7 +200,7 @@ class ScreenManager:
         draw = self.display.draw() # Get a PIL Draw object
         self.display.clear(self.COLOUR_BG) 
         #draw = ImageDraw.Draw(self.im)
-        font = ImageFont.load_default(14)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=14)
 
         touchActiveRegions = tuple()
         
@@ -227,7 +227,7 @@ class ScreenManager:
 
         button_label = "Finish"
         
-        font = ImageFont.load_default(10)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
 
         button_xy = (X_Pos, Y_Pos)
         button_xy += (button_xy[0] + button_dims[0], button_xy[1] + button_dims[1])
@@ -245,16 +245,16 @@ class ScreenManager:
 
         for label, unit, Xoffset, size, value, in zip(paramsLabels, paramsUnits, paramsXoffsets, paramsFontSize, program.getParameters()):
             
-            font = ImageFont.load_default(8)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=8)
             draw.text(xy=(X_Pos, Y_Pos), text=label, fill=self.COLOUR_TEXT_LIGHT, font=font)
             Y_Pos += 13
 
-            font = ImageFont.load_default(size)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=size)
             draw.text(xy=(X_Pos + Xoffset, Y_Pos), text=str(value)+unit, fill=self.COLOUR_OUTLINE, font=font)
             Y_Pos += 13
 
 
-        font = ImageFont.load_default(10)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
         button_label = tuple()
         if selected_segment is None:
             button_label += ("Add",)
@@ -285,7 +285,7 @@ class ScreenManager:
             touchActiveRegions += ((button_xy, label),)
 
         ## central edit box
-        font = ImageFont.load_default(10)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
 
         box_wd = (140, 110)
         box_xy = (self.WIDTH / 2 - box_wd[0] / 2, 28)
@@ -386,7 +386,7 @@ class ScreenManager:
 
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
-        font = ImageFont.load_default(12)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=12)
         touchActiveRegions = tuple()
         
         numberOfButtons = len(options)
@@ -408,7 +408,7 @@ class ScreenManager:
 
         draw.text(xy=(self.WIDTH/2, self.HEIGHT/2+12), text=message, font=font, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
         
-        font = ImageFont.load_default(10)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
 
         X_pos = box_xy[0] + marginLength 
         Y_pos = box_xy[1] + 25
@@ -428,7 +428,7 @@ class ScreenManager:
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
-        font = ImageFont.load_default(14)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=14)
         draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), text = "Select program", fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
 
         touchActiveRegions = tuple()
@@ -463,7 +463,7 @@ class ScreenManager:
 
         if newProgramEnabled == True:
 
-            font = ImageFont.load_default(10)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
             newButtonWidth = 70
             newButtonHeigh = 14
             newButtonStartX = 30
@@ -507,7 +507,7 @@ class ScreenManager:
 
                 touchActiveRegions += ((box_xy, progID),)
 
-                font = ImageFont.load_default(12)
+                font = ImageFont.truetype(font="Roboto-Regular.ttf", size=12)
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text =  thisWorkoutParams.name, # Box title
                             fill = self.COLOUR_TEXT_LIGHT,
@@ -516,7 +516,7 @@ class ScreenManager:
                 
                 
                 Y_offset += 18
-                font = ImageFont.load_default(8)
+                font = ImageFont.truetype(font="Roboto-Regular.ttf", size=8)
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text = "Time", # Box title
                             fill = self.COLOUR_TEXT_LIGHT,
@@ -659,7 +659,7 @@ class ScreenManager:
         draw.line(xy=((point_x, point_y - LINE_LENGTH - GAP), (point_x, point_y - GAP)), fill=self.COLOUR_OUTLINE, width=1)
         draw.line(xy=((point_x, point_y + GAP), (point_x, point_y + LINE_LENGTH + GAP)), fill=self.COLOUR_OUTLINE, width=1)
 
-        font = ImageFont.load_default(14)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=14)
         draw.text(xy=(self.WIDTH/2, self.HEIGHT/2), text="Touch the screen\nat the indicated spot", 
                   align="center", anchor="mm", fill=self.COLOUR_FILL, font=font)
 
@@ -691,7 +691,7 @@ class ScreenManager:
             
             box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
             
-            font = ImageFont.load_default(10)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=10)
             
             draw.text(xy = (box_centre_xy[0], box_centre_xy[1]-12), 
                     text = box_Labels[i][0], # Box title
@@ -733,7 +733,7 @@ class ScreenManager:
                 # no extra info to print, skip the rest of the iteration
                 continue
 
-            font = ImageFont.load_default(9)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=9)
 
             draw.text(xy = (box_centre_xy[0] - box_width / 2 + 7, box_centre_xy[1]+5), 
                     text = "Total:    " + str(box_Labels[i][1]), # total
@@ -782,7 +782,7 @@ class ScreenManager:
                     fill  = self.COLOUR_OUTLINE, 
                     width = LINE_THICKNESS)
             
-            font = ImageFont.load_default(11)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=11)
 
             draw.text(xy = (self.MARGIN_LARGE+15, Y_Pos + section_height / 2),
                     text = section["Section"],
@@ -793,7 +793,7 @@ class ScreenManager:
             X_Pos += 20
             for key in section["labels"]:
 
-                font = ImageFont.load_default(8)
+                font = ImageFont.truetype(font="Roboto-Regular.ttf", size=8)
                 draw.text(xy = (X_Pos, Y_Pos+35),
                         text = key,
                         fill = self.COLOUR_TEXT_LIGHT,
@@ -801,7 +801,7 @@ class ScreenManager:
                         anchor="mm")
                 
 
-                font = ImageFont.load_default(16)
+                font = ImageFont.truetype(font="Roboto-Regular.ttf", size=16)
                 draw.text(xy = (X_Pos, Y_Pos+15),
                         text = str(section["labels"][key]),
                         fill = self.COLOUR_TEXT_LIGHT,
@@ -820,7 +820,8 @@ class ScreenManager:
         
         self.display.clear()
         draw = self.display.draw() # Get a PIL Draw object
-        font = ImageFont.load_default(16)
+
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=16)
         #draw = ImageDraw.Draw(self.im)
         
         triangleWidth = 10
@@ -888,11 +889,11 @@ class ScreenManager:
 
             pos_x = BOX_X+80
             pos_y = box_y + 40
-            font=ImageFont.load_default(14)
+            font=ImageFont.truetype(font="Roboto-Regular.ttf", size=14)
 
             draw.text(xy=(pos_x, box_y+16), text=userList.listOfUsers[i].Name, font=font, anchor="lm", fill=self.COLOUR_FILL)
 
-            font=ImageFont.load_default(9)
+            font=ImageFont.truetype(font="Roboto-Regular.ttf", size=9)
 
             labels_col1 = ("Times riden: ", "Total Distance:", "Total Energy:")
             values_col1 = (userList.listOfUsers[i].noWorkouts, userList.listOfUsers[i].totalDistance, userList.listOfUsers[i].totalEnergy)
@@ -965,7 +966,7 @@ class ScreenManager:
             
             touchActiveRegions += ((box_xy, state),)
             
-            font = ImageFont.load_default(12)
+            font = ImageFont.truetype(font="Roboto-Regular.ttf", size=12)
             box_centre_xy = (box_xy[0] + box_width / 2, box_xy[1] + box_height / 2)
             draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_LIGHT, font = font, align="center", anchor="mm")
             
@@ -988,9 +989,9 @@ class ScreenManager:
 
         draw.rectangle(xy=(0,0, WIDTH-1, HEIGHT-1), outline=self.COLOUR_OUTLINE, fill=self.COLOUR_BG_LIGHT, width=2)
 
-        font = ImageFont.load_default(12)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=12)
         draw.text(xy=(WIDTH/2, 10), text="Trainer Not Connected!", anchor="mt", font=font)
-        font = ImageFont.load_default(9)
+        font = ImageFont.truetype(font="Roboto-Regular.ttf", size=9)
         draw.text(xy=(WIDTH/2, 47), text="Power up  or  start  pedalling\nto  wake up  the  trainer", anchor="mm", font=font, align="center")
 
         self.display.buffer.paste(image,(self.WIDTH/2, self.HEIGHT/5*4))
