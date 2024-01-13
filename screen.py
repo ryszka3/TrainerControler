@@ -91,9 +91,12 @@ class TouchScreen:
     def checkTouch(self) -> tuple:
         rawTouch = self.touchscreen.get_touch()
         if rawTouch is None:
+            print("A")
             return (False, (0,0))
+            
         else:
             scaled = self.scaleCoordinates(rawTouch)
+            print("B")
             return (True, scaled)
 
 class ScreenManager:
