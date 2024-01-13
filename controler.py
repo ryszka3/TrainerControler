@@ -447,6 +447,7 @@ class Supervisor:
                 while self.state == "UserChange":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
+                        print("Touch! ", location)
                         for region in touchActiveRegions:
                             boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                             if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
