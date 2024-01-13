@@ -194,10 +194,11 @@ class Supervisor:
                     
             if self.state == "ProgEdit":
 
+                print("state: ProgEdit")
+
                 if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
                     self.oldState = "ProgEdit"
                     self.state = "ProgSelect"
-                    break
                 else:
                     #### if coming from prog select then start the editor
                     
@@ -293,6 +294,8 @@ class Supervisor:
                         await asyncio.sleep(0.1)
 
             if self.state == "ProgSelect":
+
+                print("state: ProgSelect")
                 
                 numberOfWorkoutPrograms = workoutManager.numberOfWorkoutPrograms()
                 
