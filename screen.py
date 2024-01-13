@@ -56,8 +56,8 @@ class TouchScreen:
     def scaleCoordinates(self, point):
         """Scales raw X,Y values to match the LCD screen pixel dimensions."""
         a, b = point
-        x = self.WIDTH  - int(self.x_multiplier * a + self.x_offset)
-        y = self.HEIGHT - int(self.y_multiplier * b + self.y_offset)
+        x = self.WIDTH  - int(self.x_multiplier * b + self.x_offset)
+        y = self.HEIGHT - int(self.y_multiplier * a + self.y_offset)
         
         return (x, y)
     
