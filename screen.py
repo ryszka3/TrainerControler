@@ -72,17 +72,17 @@ class TouchScreen:
         measuredPoint_1x, measuredPoint_1y = measuredP1     # unpack into x, y pair
         measuredPoint_2x, measuredPoint_2y = measuredP2
 
-        measuredPoint_1x_raw = (measuredPoint_1x - self.x_offset) / self.x_multiplier
-        measuredPoint_2x_raw = (measuredPoint_2x - self.x_offset) / self.x_multiplier
+        measuredPoint_1x_raw = ((self.WIDTH - measuredPoint_1x) - self.x_offset) / self.x_multiplier
+        measuredPoint_2x_raw = ((self.WIDTH - measuredPoint_2x) - self.x_offset) / self.x_multiplier
 
-        measuredPoint_1y_raw = (measuredPoint_1y - self.y_offset) / self.y_multiplier
-        measuredPoint_2y_raw = (measuredPoint_2y - self.y_offset) / self.y_multiplier
+        measuredPoint_1y_raw = ((self.HEIGHT - measuredPoint_1y) - self.y_offset) / self.y_multiplier
+        measuredPoint_2y_raw = ((self.HEIGHT - measuredPoint_2y) - self.y_offset) / self.y_multiplier
 
-        self.x_multiplier = (requestedPoint_2x - requestedPoint_1x) / (measuredPoint_2x_raw - measuredPoint_1x_raw)
-        self.x_offset = requestedPoint_1x - self.x_multiplier * measuredPoint_1x_raw
+        self.x_multiplier = (requestedPoint_2x - requestedPoint_1x) / abs((measuredPoint_2x_raw - measuredPoint_1x_raw))
+        self.x_offset = self.WIDTH - self.x_multiplier * measuredPoint_1x_raw - requestedPoint_1x
 
-        self.y_multiplier = (requestedPoint_2y - requestedPoint_1y) / (measuredPoint_2y_raw - measuredPoint_1y_raw)
-        self.y_offset = requestedPoint_1y - self.y_multiplier * measuredPoint_1y_raw
+        self.y_multiplier = (requestedPoint_2y - requestedPoint_1y) / abs((measuredPoint_2y_raw - measuredPoint_1y_raw))
+        self.y_offset = self.HEIGHT - self.y_multiplier * measuredPoint_1y_raw - requestedPoint_1y
 
         return (self.x_multiplier, self.x_offset, self.y_multiplier, self.y_offset)
 
