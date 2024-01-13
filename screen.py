@@ -988,7 +988,7 @@ class ScreenManager:
         draw.rectangle(xy=(200,0,300,100), fill=(0,0,255))
         self.display.display()
         return touchActiveRegions
-cp
+
 
     def drawConnectionErrorMessage(self):
         WIDTH = 150
