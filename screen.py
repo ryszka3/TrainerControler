@@ -581,7 +581,7 @@ class ScreenManager:
                                                     bgColour=self.COLOUR_BG_LIGHT,
                                                     segmentsColour=self.COLOUR_FILL)
                 
-                self.im.paste(chartImage, (box_xy[0]+7, self.MARGIN_SMALL+Y_offset))
+                self.display.buffer.paste(chartImage, (box_xy[0]+7, self.MARGIN_SMALL+Y_offset))
 
                 Y_offset = Y_offset_start + box_width_height[1]+18
 
@@ -885,7 +885,7 @@ class ScreenManager:
             targetHeight = 60
             image = image.resize((int(imageRatio*targetHeight), int(targetHeight)))
 
-            self.im.paste(image, (BOX_X+10, box_y+10))
+            self.display.buffer.paste(image, (BOX_X+10, box_y+10))
 
             pos_x = BOX_X+80
             pos_y = box_y + 40
