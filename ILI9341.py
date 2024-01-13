@@ -110,7 +110,8 @@ def image_to_data(image):
     #NumPy is much faster at doing this. NumPy code provided by:
     #Keith (https://www.blogger.com/profile/02555547344016007163)
     pb = np.array(image.convert('RGB')).astype('uint16')
-    color = ((pb[:,:,0] & 0xF8) << 8) | ((pb[:,:,1] & 0xFC) << 3) | (pb[:,:,2] >> 3)
+    #color = ((pb[:,:,0] & 0xF8) << 8) | ((pb[:,:,1] & 0xFC) << 3) | (pb[:,:,2] >> 3)
+    color = ((pb[:,:,2] & 0xF8) << 8) | ((pb[:,:,1] & 0xFC) << 3) | (pb[:,:,0] >> 3)
     return np.dstack(((color >> 8) & 0xFF, color & 0xFF)).flatten().tolist()
 
 class ILI9341(object):
