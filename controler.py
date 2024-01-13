@@ -43,10 +43,10 @@ if "TurboTrainer" in config:
 
 if "TouchScreen" in config:
     try:
-        x_multiplier = config["TouchScreen"]["X_Multiplier"]
-        x_offset =     config["TouchScreen"]["X_Offset"]
-        y_multiplier = config["TouchScreen"]["Y_Multiplier"]
-        y_offset =     config["TouchScreen"]["Y_Offset"]
+        x_multiplier = float(config["TouchScreen"]["X_Multiplier"])
+        x_offset =     float(config["TouchScreen"]["X_Offset"])
+        y_multiplier = float(config["TouchScreen"]["Y_Multiplier"])
+        y_offset =     float(config["TouchScreen"]["Y_Offset"])
 
         touchScreen.setCalibration(x_multiplier, x_offset, y_multiplier, y_offset)
 
