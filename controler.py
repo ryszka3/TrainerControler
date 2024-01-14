@@ -233,7 +233,7 @@ class Supervisor:
                                         editedSegment.duration += int(str(value).replace("m","")) * 60
 
                                     elif value in ("-10s", "+10s"):
-                                        editedSegment.duration += int(str(value).replace("m","")) * 1
+                                        editedSegment.duration += int(str(value).replace("s","")) * 1
 
                                     elif value in range(0, 999):    ## clicked on a segments chart
                                         print("Segment selection: ", value)
