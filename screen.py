@@ -681,7 +681,7 @@ class ScreenManager:
         #self.im.show()
 
     def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
-        
+        print("check0")
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
