@@ -698,7 +698,7 @@ class ScreenManager:
                      (workoutType,),
                      ("Remaining Time:", self.dataContainer.workoutDuration - self.dataContainer.workoutTime
                                       , self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
-        
+        print("check1")
         for i in range(noBoxes):
             box_xy = ((self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), self.MARGIN_SMALL), 
                       (self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE) + box_width, self.MARGIN_SMALL+box_height))
@@ -761,7 +761,7 @@ class ScreenManager:
                     font = font,
                     anchor="lm")
 
-        
+        print("check2")
         Y_Pos: int = Y_POS_SECTIONS
 
         section1: dict = {"Section": "Speed", "labels": {
@@ -787,7 +787,7 @@ class ScreenManager:
 
         all_sections: tuple = (section1, section2, section3, section4)
         section_height = self.HEIGHT * 3 / 4 / len(all_sections)
-        
+        print("check3")
         for section in all_sections:
             
             X_Pos: int = self.MARGIN_LARGE + 100
@@ -826,7 +826,7 @@ class ScreenManager:
                 X_Pos += ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
             
             Y_Pos += section_height
-
+        print("check4")
         self.display.display()
         return touchActiveRegions
 
