@@ -139,6 +139,7 @@ class Supervisor:
                         lcd.drawConnectionErrorMessage()
                         self.state == "MainMenu"
                         await asyncio.sleep(4.0)
+                        continue
                     
                     lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
@@ -235,6 +236,7 @@ class Supervisor:
                                         editedSegment.duration += int(str(value).replace("m","")) * 1
 
                                     elif value in range(0, 999):    ## clicked on a segments chart
+                                        print("Segment selection: ", value)
                                         selectedSegmentID = value
                                         editedSegment = editedWorkoutProgram.segments[selectedSegmentID].copy()  ## load segment to editor
                                     

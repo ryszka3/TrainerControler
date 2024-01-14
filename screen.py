@@ -384,14 +384,10 @@ class ScreenManager:
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
         
-        #self.im=self.im.convert("L")
-        #self.im=self.im.convert("RGB")
-
         self.display.buffer = self.display.buffer.convert("L")
         self.display.buffer = self.display.buffer.convert("RGB")
 
         draw = self.display.draw() # Get a PIL Draw object
-        #draw = ImageDraw.Draw(self.im)
         font = ImageFont.truetype(font=self.font_name, size=12)
         touchActiveRegions = tuple()
         
@@ -400,7 +396,7 @@ class ScreenManager:
         buttonHeight = 16
         marginLength = 8
 
-    
+        print("button length: ", buttonLength)
         messageWidth = numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1)
         messageHeight = 50
 
@@ -532,7 +528,7 @@ class ScreenManager:
                 X_offset += 22
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text = formatTime(thisWorkoutParams.totalDuration), # Box title
-                            fill = self.COLOUR_FILL,
+                            fill = self.COLOUR_OUTLINE,
                             font = font,
                             anchor="lm")
                 
@@ -546,7 +542,7 @@ class ScreenManager:
                 X_offset += 45
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text = str(thisWorkoutParams.avgPower) + " W", # Box title
-                            fill = self.COLOUR_FILL,
+                            fill = self.COLOUR_OUTLINE,
                             font = font,
                             anchor="lm")
                 
@@ -561,7 +557,7 @@ class ScreenManager:
                 X_offset += 22
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text = str(thisWorkoutParams.totalWork) + " kJ", # Box title
-                            fill = self.COLOUR_FILL,
+                            fill = self.COLOUR_OUTLINE,
                             font = font,
                             anchor="lm")
                 
@@ -575,7 +571,7 @@ class ScreenManager:
                 X_offset += 45
                 draw.text(xy = (self.MARGIN_LARGE + X_offset, self.MARGIN_SMALL+Y_offset), 
                             text = str(thisWorkoutParams.maxPower) + " W", # Box title
-                            fill = self.COLOUR_FILL,
+                            fill = self.COLOUR_OUTLINE,
                             font = font,
                             anchor="lm")
                 
@@ -968,13 +964,13 @@ class ScreenManager:
 
             box_xy = (X_Pos, Y_Pos, X_Pos + box_width, Y_Pos + box_height)
 
-            draw.rounded_rectangle(xy = box_xy, radius = 4, fill = self.COLOUR_BG_LIGHT, outline = self.COLOUR_OUTLINE, width = 3)
+            draw.rounded_rectangle(xy = box_xy, radius = 4, fill = self.COLOUR_BG_LIGHT, outline = self.COLOUR_OUTLINE, width = 5)
             
             touchActiveRegions += ((box_xy, state),)
             
             font = ImageFont.truetype(font=self.font_name, size=12)
             box_centre_xy = (box_xy[0] + box_width / 2, box_xy[1] + box_height / 2)
-            draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_DARK, font = font, align="center", anchor="mm")
+            draw.text(xy = box_centre_xy, text = label, fill = self.COLOUR_TEXT_LIGHT, font = font, align="center", anchor="mm")
             
             X_Pos += box_width + 12
 
@@ -999,6 +995,9 @@ class ScreenManager:
         draw.text(xy=(WIDTH/2, 10), text="Trainer Not Connected!", anchor="mt", font=font)
         font = ImageFont.truetype(font=self.font_name, size=9)
         draw.text(xy=(WIDTH/2, 47), text="Power up  or  start  pedalling\nto  wake up  the  trainer", anchor="mm", font=font, align="center")
+
+        self.display.buffer = self.display.buffer.convert("L")
+        self.display.buffer = self.display.buffer.convert("RGB")
 
         self.display.buffer.paste(image,(int(self.WIDTH/2-WIDTH/2), int(self.HEIGHT - HEIGHT - 40)))
         self.display.display()
