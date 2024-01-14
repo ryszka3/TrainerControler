@@ -216,7 +216,7 @@ class ScreenManager:
                     font = font,
                     anchor="mt")
 
-        chart, touchActiveRegions = self.drawSegmentsChart(chartWidth      = int(self.WIDTH - 2 * self.MARGIN_LARGE),
+        chart, chartTouchActiveRegions = self.drawSegmentsChart(chartWidth      = int(self.WIDTH - 2 * self.MARGIN_LARGE),
                                                            chartHeight     = int(self.HEIGHT * 1 / 3),
                                                            bgColour        = self.COLOUR_BG_LIGHT,
                                                            segmentsColour  = self.COLOUR_FILL,
@@ -224,7 +224,19 @@ class ScreenManager:
                                                            selectedSegment = selected_segment,
                                                            workoutParams   = program.getParameters())
 
-        self.display.buffer.paste(im = chart, box=(self.MARGIN_LARGE, int(self.HEIGHT * 2 / 3)-self.MARGIN_LARGE))
+        chartBox_x = self.MARGIN_LARGE
+        chartBox_y = int(self.HEIGHT * 2 / 3)-self.MARGIN_LARGE
+        
+        for region, value in chartTouchActiveRegions:  #### shift touch region by chart's x,y 
+            x1, y1, x2, y2 = region
+            x1 += chartBox_x
+            x2 += chartBox_x
+            y1 += chartBox_y
+            y2 += chartBox_y
+
+            touchActiveRegions += (((x1, y1, x2, y2), value),)
+
+        self.display.buffer.paste(im = chart, box=(chartBox_x, chartBox_y))
         
         button_dims = (65, 20)
         
