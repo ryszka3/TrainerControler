@@ -104,7 +104,7 @@ class Supervisor:
         
         while True:     #### Main loop
             if self.state == "MainMenu":
-                print("state: Main menu")
+                print("state: ", self.state)
                 touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
                 loopCounter: int = 0
                 MAX_COUNT = 5
@@ -148,10 +148,12 @@ class Supervisor:
 
             if self.state == "RideProgram":
 
+                print("state: ", self.state)
+
                 if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
                     self.oldState = "RideProgram"
                     self.state = "ProgSelect"
-                    break
+                    
                 else:
                     if device_heartRateSensor.connectionState == True:
                         device_heartRateSensor.subscribeToService()
@@ -196,7 +198,7 @@ class Supervisor:
                     
             if self.state == "ProgEdit":
 
-                print("state: ProgEdit")
+                print("state: ", self.state)
 
                 if self.oldState == "MainMenu": ## if coming from the menu then go to prog select first 
                     self.oldState = "ProgEdit"
@@ -298,7 +300,7 @@ class Supervisor:
 
             if self.state == "ProgSelect":
 
-                print("state: ProgSelect")
+                print("state: ", self.state)
                 
                 numberOfWorkoutPrograms = workoutManager.numberOfWorkoutPrograms()
                 
@@ -362,7 +364,7 @@ class Supervisor:
                     await asyncio.sleep(self.sleepDuration)
 
             if self.state == "Settings":
-                print("state: Settings")
+                print("state: ", self.state)
                 touchActiveRegions = lcd.drawPageSettings()
                 
                 while self.state == "Settings":
@@ -381,7 +383,7 @@ class Supervisor:
 
             if self.state == "Calibrate":    ## screen alibration
 
-                print("state: Calibrate")
+                print("state: ", self.state)
                 point1 = (20,20)
                 point2 = (300,220)
                 measuredP1 = None
@@ -418,31 +420,31 @@ class Supervisor:
                     await asyncio.sleep(self.sleepDuration)    
 
             if self.state == "Trainer":
-                print("state: Trainer")
+                print("state: ", self.state)
 
                 self.oldState = self.state
                 self.state = "MainMenu"
                                     
             if self.state == "HRMonitor":
-                print("state: HRMonitor")
+                print("state: ", self.state)
 
                 self.oldState = self.state
                 self.state = "MainMenu"
                                     
             if self.state == "Climbr":
-                print("state: Climbr")
+                print("state: ", self.state)
 
                 self.oldState = self.state
                 self.state = "MainMenu"
 
             if self.state == "History":
-                print("state: History")
+                print("state: ", self.state)
 
                 self.oldState = self.state
                 self.state = "MainMenu"
 
             if self.state == "UserChange":
-                print("state: UserChange")
+                print("state: ", self.state)
 
                 numberOfUsers = len(userList.listOfUsers)
                 
