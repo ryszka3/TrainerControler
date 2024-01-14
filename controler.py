@@ -107,7 +107,7 @@ class Supervisor:
                 print("state: Main menu")
                 touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
                 loopCounter: int = 0
-                MAX_COUNT = 14
+                MAX_COUNT = 5
                 while self.state == "MainMenu":
                     
                     heartFillColour = lcd.COLOUR_HEART
