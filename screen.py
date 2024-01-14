@@ -392,7 +392,7 @@ class ScreenManager:
 
 
         self.display.display()
-        print(touchActiveRegions)
+
         return touchActiveRegions
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
@@ -409,7 +409,6 @@ class ScreenManager:
         buttonHeight = 16
         marginLength = 8
 
-        print("button length: ", buttonLength)
         messageWidth = numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1)
         messageHeight = 50
 

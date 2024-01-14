@@ -61,7 +61,7 @@ class Supervisor:
         self.state: str = "UserChange"
         self.oldState: str = "UserChange"
         self.activeUserID = 0
-        self.sleepDuration = 0.1
+        self.sleepDuration = 0.02
 
     async def loop(self):
         dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
@@ -251,7 +251,7 @@ class Supervisor:
                                         selectedSegmentID = None
 
                                     elif value == "Update":
-                                        editedWorkoutProgram.insertSegment(selectedSegmentID, editedSegment)
+                                        editedWorkoutProgram.updateSegment(selectedSegmentID, editedSegment)
                                         
                                         ## reset edited seg and pointer
                                         editedSegment = WorkoutSegment()
