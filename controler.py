@@ -157,9 +157,13 @@ class Supervisor:
                 else:
                     print("Loopy: will be starting program no: ", self.selectedProgram)
                     if device_heartRateSensor.connectionState == True:
+                        print("1")
                         device_heartRateSensor.subscribeToService()
+                    print("after 1st if")
                     if device_turboTrainer.connectionState == True:
+                        print("2")
                         device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+                    print("after 2nd if")
                     #### if coming from prog select then start the workout
                     touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
                     workoutManager.startWorkout(self.selectedProgram)
