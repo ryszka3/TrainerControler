@@ -120,8 +120,8 @@ class ScreenManager:
         self.MARGIN_LARGE: int  = 12
         self.MARGIN_SMALL: int  = 6
 
-        self.COLOUR_BG:         tuple = (31,   31,  31)
-        self.COLOUR_BG_LIGHT:   tuple = (62,   62,  62)
+        self.COLOUR_BG:         tuple = (15,   15,  15)
+        self.COLOUR_BG_LIGHT:   tuple = (42,   42,  42) ## was 62
         self.COLOUR_FILL:       tuple = (139, 175, 255)
         self.COLOUR_OUTLINE:    tuple = (255, 215, 10)
         self.COLOUR_TEXT_LIGHT: tuple = (156, 223, 250)
@@ -832,7 +832,7 @@ class ScreenManager:
 
     def drawPageUserSelect(self, userList: UserList, displayRange: tuple, previousEnabled: bool = False, nextEnabled: bool = False) -> tuple:
         
-        self.display.clear()
+        self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
 
         font = ImageFont.truetype(font=self.font_name, size=16)
@@ -939,7 +939,7 @@ class ScreenManager:
     #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
     def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
         
-        self.display.clear()
+        self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
