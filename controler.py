@@ -155,6 +155,7 @@ class Supervisor:
                     self.state = "ProgSelect"
                     
                 else:
+                    print("Loopy: will be starting program no: ", self.selectedProgram)
                     if device_heartRateSensor.connectionState == True:
                         device_heartRateSensor.subscribeToService()
                     if device_turboTrainer.connectionState == True:
@@ -162,7 +163,9 @@ class Supervisor:
                     #### if coming from prog select then start the workout
                     touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
                     workoutManager.startWorkout(self.selectedProgram)
+                    print("Program execution loop, workout manager state: ", workoutManager.state)
                     await asyncio.sleep(2)
+                    print("After 2s delay, state: ", workoutManager.state)
                     while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
@@ -189,7 +192,7 @@ class Supervisor:
                         lcd.drawPageWorkout("Program", workoutManager.state)
                         await asyncio.sleep(self.sleepDuration)
                     #### program has ended
-                    
+                    print("Execution loop has finished!")
                     userList.updateUserRecord(userID=self.activeUserID,
                                                 noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
                                                 distance = dataAndFlagContainer.distance,
