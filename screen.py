@@ -682,18 +682,20 @@ class ScreenManager:
 
     def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
         print("check0")
+
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
-
+        print("check0a")
         X_POS_END: int = 180
         LINE_THICKNESS: int = 2
         Y_POS_SECTIONS = self.HEIGHT / 4    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
-
+        print("check0b")
         noBoxes = 3
         box_width = (self.WIDTH - self.MARGIN_LARGE * (noBoxes+1))/noBoxes
         box_height = 45
+        print("check0c")
         box_Labels = (("Elapsed Time:", self.dataContainer.workoutTime, self.dataContainer.currentSegment.elapsedTime),
                      (workoutType,),
                      ("Remaining Time:", self.dataContainer.workoutDuration - self.dataContainer.workoutTime
