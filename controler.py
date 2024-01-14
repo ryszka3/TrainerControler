@@ -61,6 +61,7 @@ class Supervisor:
         self.state: str = "UserChange"
         self.oldState: str = "UserChange"
         self.activeUserID = 0
+        self.sleepDuration = 0.1
 
     async def loop(self):
         dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
@@ -142,7 +143,7 @@ class Supervisor:
                     lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
                     loopCounter = (loopCounter + 1) % MAX_COUNT
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.sleepDuration)
 
             if self.state == "RideProgram":
 
@@ -183,7 +184,7 @@ class Supervisor:
                                         workoutManager.queue.put(QueueEntry("Start", 0))
 
                         lcd.drawPageWorkout("Program", workoutManager.state)
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(self.sleepDuration)
                     #### program has ended
                     
                     userList.updateUserRecord(userID=self.activeUserID,
@@ -287,11 +288,11 @@ class Supervisor:
                                                 
                                                 break   ## exits while loop if clicked on a valid button
 
-                                            await asyncio.sleep(0.1)
+                                            await asyncio.sleep(self.sleepDuration)
 
 
                             touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(self.sleepDuration)
 
             if self.state == "ProgSelect":
 
@@ -356,7 +357,7 @@ class Supervisor:
                                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
                                 
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.sleepDuration)
 
             if self.state == "Settings":
                 print("state: Settings")
@@ -374,7 +375,7 @@ class Supervisor:
                                 self.state = value
                                 break
 
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.sleepDuration)
 
             if self.state == "Calibrate":    ## screen alibration
 
@@ -412,7 +413,7 @@ class Supervisor:
                             self.state = "MainMenu"
                             await asyncio.sleep(3)
 
-                    await asyncio.sleep(0.1)    
+                    await asyncio.sleep(self.sleepDuration)    
 
             if self.state == "Trainer":
                 print("state: Trainer")
@@ -475,7 +476,7 @@ class Supervisor:
                                     self.state = "MainMenu"
                                 
 
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.sleepDuration)
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               
