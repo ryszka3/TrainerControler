@@ -380,6 +380,7 @@ class ScreenManager:
 
 
         self.display.display()
+        print(touchActiveRegions)
         return touchActiveRegions
     
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
@@ -418,7 +419,7 @@ class ScreenManager:
 
             button_xy = (X_pos, Y_pos, X_pos+buttonLength, Y_pos+buttonHeight)
             draw.rectangle(xy=button_xy, fill=self.COLOUR_BUTTON)
-            draw.text(xy=(X_pos+buttonLength/2, Y_pos+buttonHeight/2), text=opt, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
+            draw.text(xy=(X_pos+buttonLength/2, Y_pos+buttonHeight/2), text=opt, fill=self.COLOUR_TEXT_LIGHT, anchor="mm", font=font)
             X_pos += buttonLength+marginLength
             touchActiveRegions += ((button_xy, opt),)
 

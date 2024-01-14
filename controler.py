@@ -137,9 +137,9 @@ class Supervisor:
                     if self.state in ("RideProgram", "Freeride") and device_turboTrainer.connectionState == False:
                         #### no TT connection, display error message, cancel state change
                         lcd.drawConnectionErrorMessage()
-                        self.state == "MainMenu"
+                        self.state = "MainMenu"
                         await asyncio.sleep(4.0)
-                        continue
+                        
                     
                     lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
