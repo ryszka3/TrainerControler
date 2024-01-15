@@ -695,7 +695,8 @@ class ScreenManager:
         box_width = (self.WIDTH - self.MARGIN_LARGE * (noBoxes+1))/noBoxes
         box_height = 45
         #222 - self.dataContainer.workoutTime
-        box_Labels = (("Elapsed Time:", "222", self.dataContainer.currentSegment.elapsedTime),
+        #333 - self.dataContainer.currentSegment.elapsedTime
+        box_Labels = (("Elapsed Time:", "222", "333"),
                       ("program",),
                       ("Remaining Time:", "222", "333")
                      )
