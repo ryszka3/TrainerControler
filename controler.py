@@ -409,6 +409,7 @@ class Supervisor:
                         if measuredP1 is None: # first point 
                             measuredP1 = location
                             lcd.drawPageCalibration(point2)
+                            await asyncio.sleep(1.0)
 
                         else:
                             measuredP2 = location
