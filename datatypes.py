@@ -198,7 +198,7 @@ class DataContainer:
         self.NoAverage = int(0)
         self.programRunningFlag = bool(True)
         self.activeUser: User = None
-        self.currentSegment: WorkoutSegment = None
+        self.currentSegment: WorkoutSegment = WorkoutSegment("Power", 0, 100)
         self.distance = float(0)
         self.totalEnergy = float(0)
 

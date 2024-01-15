@@ -301,7 +301,7 @@ class WorkoutManager():
                 self.state = "IDLE"
                 self.currentWorkout = None
                 self.dataContainer.workoutTime = 0
-                self.dataContainer.currentSegment = None
+                self.dataContainer.currentSegment = WorkoutSegment("Power", 0, 100)
                 self.dataContainer.workoutDuration = 0
 
 
