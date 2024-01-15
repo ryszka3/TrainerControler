@@ -86,7 +86,7 @@ class UserList:
                         "noWorkouts": user.noWorkouts, 
                         "totDistance": user.totalDistance, 
                         "totEnergy": user.totalEnergy,
-                        "Picture:": user.picture}
+                        "Picture": user.picture}
 
             dataToJSON.append(userDict)
 
