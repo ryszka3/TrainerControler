@@ -696,7 +696,7 @@ class ScreenManager:
         box_height = 45
         #222 - self.dataContainer.workoutTime
         #333 - self.dataContainer.currentSegment.elapsedTime
-        box_Labels = (("Elapsed Time:", "222", "333"),
+        box_Labels = (("Elapsed Time:", self.dataContainer.workoutTime, "333"),
                       ("program",),
                       ("Remaining Time:", "222", "333")
                      )
@@ -786,9 +786,9 @@ class ScreenManager:
                     "Max":str(round(self.dataContainer.max.cadence,1))}}
         
         section4: dict = {"Section": "Heart Rate", "labels": {
-                    "BPM": str(round(self.dataContainer.momentary.power,0)), 
-                    "Average":str(round(self.dataContainer.average.power,0)), 
-                    "Max":str(round(self.dataContainer.max.power,0)),
+                    "BPM": str(round(self.dataContainer.momentary.heartRate,0)), 
+                    "Average":str(round(self.dataContainer.average.heartRate,0)), 
+                    "Max":str(round(self.dataContainer.max.heartRate,0)),
                     "Zone": str(round(self.dataContainer.momentary.hrZone,0))}}
 
         all_sections: tuple = (section1, section2, section3, section4)
