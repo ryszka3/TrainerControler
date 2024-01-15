@@ -139,64 +139,64 @@ class WorkoutManager():
 
             if self.state == "IDLE": 
                 if not entry == None: 
-                    
-                    if entry.type == "Start":   # Starting a new workout
-                        print("Starting program no: ", entry.data)
-                        self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
-                        self.dataContainer.workoutDuration = self.currentWorkout.getParameters().totalDuration
-                        self.dataContainer.distance = 0
-                        self.dataContainer.totalEnergy = 0
-                        self.state = "WARMUP-PROGRAM"
-                    
-                    elif entry.type == "Freeride":
-                        self.state = "WARMUP-FREERIDE"
-                    
-                    TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
-                    
-                    for i in range(3):
+                    if entry.type in ("Start", "Freeride"):
+                        if entry.type == "Start":   # Starting a new workout
+                            print("Starting program no: ", entry.data)
+                            self.currentWorkout = self.workouts.getWorkout(entry.data).copy()   ## Get a local version of the workout
+                            self.dataContainer.workoutDuration = self.currentWorkout.getParameters().totalDuration
+                            self.dataContainer.distance = 0
+                            self.dataContainer.totalEnergy = 0
+                            self.state = "WARMUP-PROGRAM"
                         
-                        #initialisation command sequence:
-                        TurboTrainer.requestControl()
-                        TurboTrainer.reset()
-                        TurboTrainer.requestControl()
-                        TurboTrainer.start()
+                        elif entry.type == "Freeride":
+                            self.state = "WARMUP-FREERIDE"
+                        
+                        TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
+                        
+                        for i in range(3):
+                            
+                            #initialisation command sequence:
+                            TurboTrainer.requestControl()
+                            TurboTrainer.reset()
+                            TurboTrainer.requestControl()
+                            TurboTrainer.start()
 
-                        #wait until device command queue empty but max 3 seconds
-                        for j in range(6):
-                            await asyncio.sleep(0.5)
-                            if TurboTrainer.queue.empty() == True:
+                            #wait until device command queue empty but max 3 seconds
+                            for j in range(6):
+                                await asyncio.sleep(0.5)
+                                if TurboTrainer.queue.empty() == True:
+                                    break
+
+                            if TurboTrainer.remoteControlAcquired == True:
                                 break
 
-                        if TurboTrainer.remoteControlAcquired == True:
-                            break
+                        
+                        if TurboTrainer.remoteControlAcquired == False:
+                            print("Failed to aquire remote control of the fitness machine!")
+                            self.state = "STOP"
+                            continue
 
-                    
-                    if TurboTrainer.remoteControlAcquired == False:
-                        print("Failed to aquire remote control of the fitness machine!")
-                        self.state = "STOP"
-                        continue
+                        path = "Workouts/" + str(self.dataContainer.activeUser.Name)
+                        self.filename = datetime.datetime.now().strftime(path + "/Workout-%y-%m-%d-(%Hh%Mm%S)")
 
-                    path = "Workouts/" + str(self.dataContainer.activeUser.Name)
-                    self.filename = datetime.datetime.now().strftime(path + "/Workout-%y-%m-%d-(%Hh%Mm%S)")
-
-                    try:
-                        workout_logfile = open(self.filename+".csv", 'w+', newline='')
-                        csvWriter = csv.writer(workout_logfile, dialect='excel')
-                        csvWriter.writerow(list(("Workout log file","")))
-                        csvWriter.writerow(list(("Created:",
-                                                datetime.datetime.now().strftime("%d %b %Y"),
-                                                "at:",
-                                                datetime.datetime.now().strftime("%X")                                                
-                                                )))
-                        csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
-                        print("Workout data file (CSV) created")
-                    
-                    except:
-                        raise Exception("Failed creating a workout data file!")
-                    
-                    if self.writeToTCX == True:
-                        self.TCX_Object = TXCWriter()
-                        self.TCX_Object.newLap()
+                        try:
+                            workout_logfile = open(self.filename+".csv", 'w+', newline='')
+                            csvWriter = csv.writer(workout_logfile, dialect='excel')
+                            csvWriter.writerow(list(("Workout log file","")))
+                            csvWriter.writerow(list(("Created:",
+                                                    datetime.datetime.now().strftime("%d %b %Y"),
+                                                    "at:",
+                                                    datetime.datetime.now().strftime("%X")                                                
+                                                    )))
+                            csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
+                            print("Workout data file (CSV) created")
+                        
+                        except:
+                            raise Exception("Failed creating a workout data file!")
+                        
+                        if self.writeToTCX == True:
+                            self.TCX_Object = TXCWriter()
+                            self.TCX_Object.newLap()
                     
                 else:
                     await asyncio.sleep(0.1)
@@ -206,7 +206,6 @@ class WorkoutManager():
                 await asyncio.sleep(3.0)
                 self.state = self.state.removeprefix("WARMUP-")
                 self.workoutStartTime = time.time()
-
 
 
             if self.state in ("PAUSED-PROGRAM", "PAUSED_FREERIDE"):

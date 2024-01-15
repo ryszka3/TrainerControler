@@ -155,21 +155,22 @@ class Supervisor:
                     self.state = "ProgSelect"
                     
                 else:
-                    print("Loopy: will be starting program no: ", self.selectedProgram)
-                    if device_heartRateSensor.connectionState == True:
-                        print("1")
-                        device_heartRateSensor.subscribeToService()
-                    print("after 1st if")
-                    if device_turboTrainer.connectionState == True:
-                        print("2")
-                        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-                    print("after 2nd if")
                     #### if coming from prog select then start the workout
-                    touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+                    print("Loop: will be starting program no: ", self.selectedProgram)
+                    if device_heartRateSensor.connectionState == True:
+                        device_heartRateSensor.subscribeToService()
+                    if device_turboTrainer.connectionState == True:
+                        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+                    
                     workoutManager.startWorkout(self.selectedProgram)
+                    #### wait for the workout manager to start the program
+                    while workoutManager.state == "IDLE":
+                        await asyncio.sleep(self.sleepDuration)
+                    
                     print("Program execution loop, workout manager state: ", workoutManager.state)
-                    await asyncio.sleep(2)
-                    print("After 2s delay, state: ", workoutManager.state)
+
+                    touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+                    
                     while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
@@ -201,6 +202,10 @@ class Supervisor:
                                                 noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
                                                 distance = dataAndFlagContainer.distance,
                                                 energy = dataAndFlagContainer.totalEnergy)
+                    
+                    self.selectedProgram = None
+                    self.oldState = self.state
+                    self.state = "MainMenu"
 
                     
             if self.state == "ProgEdit":

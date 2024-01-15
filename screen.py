@@ -681,32 +681,30 @@ class ScreenManager:
         #self.im.show()
 
     def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
-        print("check0")
 
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
-        print("check0a")
+
         X_POS_END: int = 180
         LINE_THICKNESS: int = 2
         Y_POS_SECTIONS = self.HEIGHT / 4    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
-        print("check0b")
+
         noBoxes = 3
         box_width = (self.WIDTH - self.MARGIN_LARGE * (noBoxes+1))/noBoxes
         box_height = 45
-        print("check0c")
-        box_Labels = (("Elapsed time:", "000", "111"),
-                      ("program",),
-                      ("Remaining Time:", "222", "333")
 
-        )
+        #box_Labels = (("Elapsed time:", "000", "111"),
+         #             ("program",),
+          #            ("Remaining Time:", "222", "333")
+           #          )
 
-        #box_Labels = (("Elapsed Time:", self.dataContainer.workoutTime, self.dataContainer.currentSegment.elapsedTime),
-         #            (workoutType,),
-          #           ("Remaining Time:", self.dataContainer.workoutDuration - self.dataContainer.workoutTime
-           #                           , self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
-        print("check1")
+        box_Labels = (("Elapsed Time:", self.dataContainer.workoutTime, self.dataContainer.currentSegment.elapsedTime),
+                     (workoutType,),
+                     ("Remaining Time:", self.dataContainer.workoutDuration - self.dataContainer.workoutTime
+                                      , self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
+
         for i in range(noBoxes):
             box_xy = ((self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), self.MARGIN_SMALL), 
                       (self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE) + box_width, self.MARGIN_SMALL+box_height))
@@ -769,33 +767,32 @@ class ScreenManager:
                     font = font,
                     anchor="lm")
 
-        print("check2")
         Y_Pos: int = Y_POS_SECTIONS
 
         section1: dict = {"Section": "Speed", "labels": {
-                    "km/h": self.dataContainer.momentary.speed, 
-                    "Average":self.dataContainer.average.speed, 
-                    "Max":self.dataContainer.max.speed}}
+                    "km/h": str(round(self.dataContainer.momentary.speed,1)), 
+                    "Average":str(round(self.dataContainer.average.speed,1)), 
+                    "Max":str(round(self.dataContainer.max.speed,1))}}
         
         section2: dict = {"Section": "Power", "labels": {
-                    "W": self.dataContainer.momentary.power, 
-                    "Average":self.dataContainer.average.power, 
-                    "Max":self.dataContainer.max.power}}
+                    "W": str(round(self.dataContainer.momentary.power,0)), 
+                    "Average":str(round(self.dataContainer.average.power,0)), 
+                    "Max":str(round(self.dataContainer.max.power,0))}}
         
         section3: dict = {"Section": "Cadence", "labels": {
-                    "RPM": self.dataContainer.momentary.cadence, 
-                    "Average":self.dataContainer.average.cadence, 
-                    "Max":self.dataContainer.max.cadence}}
+                    "RPM": str(round(self.dataContainer.momentary.cadence,1)), 
+                    "Average":str(round(self.dataContainer.average.cadence,1)), 
+                    "Max":str(round(self.dataContainer.max.cadence,1))}}
         
         section4: dict = {"Section": "Heart Rate", "labels": {
-                    "BPM": self.dataContainer.momentary.power, 
-                    "Average":self.dataContainer.average.power, 
-                    "Max":self.dataContainer.max.power,
-                    "Zone": self.dataContainer.momentary.hrZone}}
+                    "BPM": str(round(self.dataContainer.momentary.power,0)), 
+                    "Average":str(round(self.dataContainer.average.power,0)), 
+                    "Max":str(round(self.dataContainer.max.power,0)),
+                    "Zone": str(round(self.dataContainer.momentary.hrZone,0))}}
 
         all_sections: tuple = (section1, section2, section3, section4)
         section_height = self.HEIGHT * 3 / 4 / len(all_sections)
-        print("check3")
+
         for section in all_sections:
             
             X_Pos: int = self.MARGIN_LARGE + 100
@@ -834,7 +831,7 @@ class ScreenManager:
                 X_Pos += ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
             
             Y_Pos += section_height
-        print("check4")
+
         self.display.display()
         return touchActiveRegions
 
