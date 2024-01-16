@@ -108,6 +108,7 @@ class Supervisor:
                 touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
                 loopCounter: int = 0
                 MAX_COUNT = 5
+                await asyncio.sleep(1.0)    ## Deadzone for touch
                 while self.state == "MainMenu":
                     
                     heartFillColour = lcd.COLOUR_HEART
@@ -170,7 +171,7 @@ class Supervisor:
                     print("Program execution loop, workout manager state: ", workoutManager.state)
 
                     touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
-                    
+                    await asyncio.sleep(1.0)    ## Deadzone for touch
                     while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
@@ -226,7 +227,7 @@ class Supervisor:
                     editedSegment = WorkoutSegment()
                     selectedSegmentID = None
                     touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                    
+                    await asyncio.sleep(1.0)    ## Deadzone for touch
                     while self.state == "ProgEdit":
                         
                         touch, location = touchScreen.checkTouch()
@@ -308,6 +309,7 @@ class Supervisor:
 
 
                             touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
+                            await asyncio.sleep(0.5)    ## Deadzone for touch
                         await asyncio.sleep(self.sleepDuration)
 
             if self.state == "ProgSelect":
@@ -331,7 +333,7 @@ class Supervisor:
 
                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-
+                await asyncio.sleep(1.0)    ## Deadzone for touch
                 while self.state == "ProgSelect":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
@@ -372,13 +374,13 @@ class Supervisor:
                                 workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
                                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-                                
+                                await asyncio.sleep(1.0)    ## Deadzone for touch  
                     await asyncio.sleep(self.sleepDuration)
 
             if self.state == "Settings":
                 print("state: ", self.state)
                 touchActiveRegions = lcd.drawPageSettings()
-                
+                await asyncio.sleep(1.0)    ## Deadzone for touch
                 while self.state == "Settings":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
@@ -470,7 +472,7 @@ class Supervisor:
                     showNextPageButton = True
 
                 touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
-                
+                await asyncio.sleep(1.0)    ## Deadzone for touch
                 while self.state == "UserChange":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
