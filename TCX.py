@@ -5,13 +5,15 @@ import datetime
 class TXCWriter:
 
     def __init__(self) -> None:
+        ET.register_namespace("", "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
         self.root  = ET.Element("TrainingCenterDatabase", attrib={"xsi:schemaLocation":"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd",
                                                      "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                                                     "xmlns": "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
                                                      })
         self.activities = ET.SubElement(self.root, "Activities")
         self.activity = ET.SubElement(self.activities, "Activity", Sport="Biking")
         self.Id = ET.SubElement(self.activity, 'Id')
-        self.Id.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%S")
+        self.Id.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ")
         self.listOfLaps = list()
 
 
@@ -34,7 +36,7 @@ class TXCWriter:
 
     def newLap(self):
         newLap = TCXLap()
-        newLap.lap = ET.SubElement(self.activity, "Lap", StartTime=self.Id.text)
+        newLap.lap = ET.SubElement(self.activity, "Lap", StartTime=datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ"))
 
         newLap.totalTimeSeconds = ET.SubElement(newLap.lap, "TotalTimeSeconds")
         newLap.totalTimeSeconds.text = str(720)
@@ -93,7 +95,7 @@ class TXCWriter:
         point = ET.SubElement(self.listOfLaps[LapID].track, "Trackpoint")
 
         Time = ET.SubElement(point, "Time")
-        Time.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%S")
+        Time.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ")
 
         DistanceMeters = ET.SubElement(point, "DistanceMeters")
         DistanceMeters.text = str(distance)

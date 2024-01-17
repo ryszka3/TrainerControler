@@ -196,7 +196,6 @@ class WorkoutManager():
                         
                         if self.writeToTCX == True:
                             self.TCX_Object = TXCWriter()
-                            self.TCX_Object.newLap()
                     
                 else:
                     await asyncio.sleep(0.1)
