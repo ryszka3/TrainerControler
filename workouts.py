@@ -6,7 +6,7 @@ import csv
 import asyncio
 from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
 from   BLE_Device  import FitnessMachine
-from   TCX         import TXCWriter
+from   TCX         import TCXWriter
 
 
 class Workouts:
@@ -112,7 +112,7 @@ class WorkoutManager():
         self.SAVEPERIOD = float(1.0)
         self.writeToTCX: bool = True
         self.filename = None
-        self.TCX_Object: TXCWriter = None
+        self.TCX_Object: TCXWriter = None
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -195,7 +195,7 @@ class WorkoutManager():
                             raise Exception("Failed creating a workout data file!")
                         
                         if self.writeToTCX == True:
-                            self.TCX_Object = TXCWriter()
+                            self.TCX_Object = TCXWriter()
                     
                 else:
                     await asyncio.sleep(0.1)

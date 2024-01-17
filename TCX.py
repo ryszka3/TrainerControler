@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 from datatypes import TCXLap, Dataset
 import datetime
 
-class TXCWriter:
+class TCXWriter:
 
     def __init__(self) -> None:
         ET.register_namespace("", "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
