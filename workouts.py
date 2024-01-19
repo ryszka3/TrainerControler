@@ -250,16 +250,18 @@ class WorkoutManager():
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
                             
                             if self.writeToTCX == True:
-                                self.TCX_Object.updateLapValues("New params here")
+                                self.TCX_Object.updateLapValues(self.dataContainer)
+                                
                                 self.TCX_Object.newLap()
+                                self.dataContainer.clearLapValues()
                             
-                            print("new segment, type:", self.dataContainer.currentSegment.segmentType, 
+                            print("New segment, type:", self.dataContainer.currentSegment.segmentType, 
                                   " Duration: ", self.dataContainer.currentSegment.duration,
                                   " Setting: ", self.dataContainer.currentSegment.setting,
                                   " Start time: ", self.dataContainer.currentSegment.startTime)
                         
                         else:
-                            print("end of workout")
+                            print("End of workout")
                             self.state = "STOP"
                     
 
@@ -275,7 +277,7 @@ class WorkoutManager():
                     self.dataContainer.totalEnergy += self.dataContainer.momentary.power * self.SAVEPERIOD / 1000 # kJ
 
                     if self.writeToTCX == True:
-                        self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance, data=self.dataContainer.momentary)
+                        self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance*1000, data=self.dataContainer.momentary)
                 
                 await asyncio.sleep(0.01)
         

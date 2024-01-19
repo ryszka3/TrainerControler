@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from datatypes import TCXLap, Dataset
+from datatypes import TCXLap, Dataset, DataContainer
 import datetime
 
 class TCXWriter:
@@ -68,20 +68,34 @@ class TCXWriter:
 
         self.listOfLaps.append(newLap)
 
-    def updateLapValues(self, newparams, LapID = None):
+    def updateLapValues(self, dataContainer: DataContainer, LapID = None):
         
         if LapID is None: ## then use most current lap
             LapID = len(self.listOfLaps)-1 
 
         lap: TCXLap = self.listOfLaps[LapID]
+        
+        if LapID > 0:
+            previousLap: TCXLap = self.listOfLaps[LapID-1]
+            previousLapEnergy = previousLap.calories * 4.184    ## kJ
+            previousLapdistance = previousLap.distanceMeters
+            previousLapTime = previousLap.totalTimeSeconds
 
-        lap.calories = 1
-        lap.distanceMeters = 7
-        lap.totalTimeSeconds = 32
-        lap.maximumSpeed  =43
-        lap.maxHRValue = 134
-        lap.averageHRValue = 110
+        else:
+            previousLapEnergy = 0
+            previousLapdistance = 0
+            previousLapTime = 0
 
+        energy_kJ   = dataContainer.totalEnergy - previousLapEnergy
+        distance_m = dataContainer.distance * 1000 - previousLapdistance
+        time_s      = dataContainer.workoutTime - previousLapTime
+
+        lap.calories = energy_kJ / 4.184   #kcal
+        lap.distanceMeters = distance_m * 1000
+        lap.totalTimeSeconds = time_s
+        lap.maximumSpeed  = dataContainer.lapMax.speed
+        lap.maxHRValue = dataContainer.lapMax.heartRate
+        lap.averageHRValue = dataContainer.lapAverage.heartRate
 
 
     def addTrackPoint(self, distance, data: Dataset, LapID=None):
