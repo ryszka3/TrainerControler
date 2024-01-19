@@ -1,15 +1,45 @@
 import queue
 import asyncio
 import contextlib
+import time
+import simplepyble
 #import csv # only for debugging
 #import datetime # only for debugging
-from   bleak        import BleakClient, BleakScanner, BleakGATTCharacteristic
-from   bleak.exc    import BleakDBusError
+from   bleak        import  BleakGATTCharacteristic
 from   datatypes    import DataContainer, MinMaxIncrement, QueueEntry
 from   data_parsers import parse_hr_measurement, parse_indoor_bike_data
 
+
+class SimpleBLE_Client:
+    def __init__(self, dev) -> None:
+        self.device = dev
+
+    # for Async Context managers:
+
+    async def __aenter__(self):
+        await self.device.connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.device.disconnect()
+
+    async def start_notify(service_uuid: str, callback):
+        pass
+    
+    async def stop_notify(service_uuid: str):
+        pass
+
+    async def write_gatt_char(service_uuid: str, message , responce: bool):
+        pass
+
+    async def read_gatt_char(service_uuid):
+        pass
+    
+
+
+
 class BLE_Device:
-    def __init__(self):
+    def __init__(self, BLE_Adaptor):
         self.address: str = None
         self.name: str = None
         self.type:str = None
@@ -17,6 +47,7 @@ class BLE_Device:
         self.connectionState: bool = False
         self.queue = queue.SimpleQueue()
         self.dataContainer: DataContainer = None
+        self.ble_adaptor = BLE_Adaptor
 
     def subscribeToService(self, service_uuid, callback = None):
         self.queue.put(QueueEntry('Subscribe', {'UUID': service_uuid, 'Callback': callback}))
@@ -53,34 +84,53 @@ class BLE_Device:
                         # can cause errors, so use a lock to avoid this.
                         print(self.name, ": awaiting lock")
                         async with lock:
-                            
-                            print("scanning for ", self.name)
-                            device = await BleakScanner.find_device_by_address(self.address)
+                                 
+                            def onFound(per):
+                                if per.address() == self.address:
+                                    self.ble_adaptor.scan_stop()
 
-                            if device is None:
+                            self.ble_adaptor.set_callback_on_scan_start(lambda: print("Scanning for ", self.name))
+                            self.ble_adaptor.set_callback_on_scan_stop(lambda: print("Scan complete."))
+                            self.ble_adaptor.set_callback_on_scan_found(onFound)
+                            t1 = time.time()
+                            # Scan for 10 seconds
+                            self.ble_adaptor.scan_start()
+                            t1 = time.time()
+                            while time.time()-t1 < 10:
+                                time.sleep(0.1)
+                                if self.ble_adaptor.scan_is_active() == False:
+                                    break
+                            else:
+                                self.ble_adaptor.scan_stop() 
+                                
+                            peripherals = self.ble_adaptor.scan_get_results()
+
+                            for p in peripherals:
+                                if p.address() == self.address:
+                                    device = p
+                                    break
+                            else:
                                 print(self.name, " not found")
                                 self.connectionState = False
                                 self.connect = False
                                 continue
 
-                            client = BleakClient(device)
+                            client = SimpleBLE_Client(device)
                             
-                            print("connecting to ", self.name)
+                            print("Connecting to ", self.name)
 
                             await stack.enter_async_context(client)
 
-                            print("connected to ", self.name)
+                            print("Connected to ", self.name)
                             self.connectionState = True
 
                             # This will be called immediately before client.__aexit__ when
                             # the stack context manager exits.
-                            stack.callback(print, "disconnecting from ", self.name)
+                            stack.callback(print, "Disconnecting from ", self.name)
 
                         # The lock is released here. The device is still connected and the
                         # Bluetooth adapter is now free to scan and connect another device
                         # without disconnecting this one.
-
-                        self.connectionState = True
                         
                         while self.connect and container.programRunningFlag:  ####    Internal state machine running while connected - Sending commands happen here
                             await asyncio.sleep(0)
@@ -109,15 +159,8 @@ class BLE_Device:
                                     
                                     elif entry.type == 'Write':
                                         #print('Write:\t', entry.data["Message"])
-                                        while(True):
-                                            try:
-                                                await client.write_gatt_char(entry.data["UUID"], entry.data["Message"] , True)
-                                        
-                                            except BleakDBusError as e:
-                                                print("BleakDBusError, retrying...")
-                                                print(e)
-                                                continue
-                                            break
+                                        await client.write_gatt_char(entry.data["UUID"], entry.data["Message"] , True)
+
                                 except:
                                     pass
 
