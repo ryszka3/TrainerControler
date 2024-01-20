@@ -10,7 +10,7 @@ from   data_parsers import parse_hr_measurement, parse_indoor_bike_data
 
 
 class BLE_Device:
-    def __init__(self, BLE_Adaptor):
+    def __init__(self):
         self.address: str = None
         self.name: str = None
         self.type:str = None
@@ -18,7 +18,6 @@ class BLE_Device:
         self.connectionState: bool = False
         self.queue = queue.SimpleQueue()
         self.dataContainer: DataContainer = None
-        self.ble_adaptor = BLE_Adaptor
 
     def subscribeToService(self, service_uuid:str, characteristic_uuid:str, callback = None) -> None:
         self.queue.put(QueueEntry("Subscribe", {"Service": service_uuid, 
@@ -39,8 +38,8 @@ class BLE_Device:
                                             "Message": message}))
 
 
-    def connection_to_BLE_Device(self, lock: threading.Lock, container: DataContainer):
-        
+    def connection_to_BLE_Device(self, adapter, lock: threading.Lock, container: DataContainer):
+        self.ble_adapter = adapter
         self.dataContainer = container
         print("starting task:", self.name)
         while(True):
@@ -58,23 +57,23 @@ class BLE_Device:
                             
                     def onFound(per):
                         if per.address() == self.address:
-                            self.ble_adaptor.scan_stop()
+                            self.ble_adapter.scan_stop()
 
-                    self.ble_adaptor.set_callback_on_scan_start(lambda: print("Scanning for ", self.name, "[", self.address,"]"))
-                    self.ble_adaptor.set_callback_on_scan_stop(lambda: print("Scan complete."))
-                    self.ble_adaptor.set_callback_on_scan_found(onFound)
+                    self.ble_adapter.set_callback_on_scan_start(lambda: print("Scanning for ", self.name, "[", self.address,"]"))
+                    self.ble_adapter.set_callback_on_scan_stop(lambda: print("Scan complete."))
+                    self.ble_adapter.set_callback_on_scan_found(onFound)
                     t1 = time.time()
                     # Scan for 10 seconds
-                    self.ble_adaptor.scan_start()
+                    self.ble_adapter.scan_start()
                     t1 = time.time()
                     while time.time()-t1 < 10:
                         time.sleep(0.1)
-                        if self.ble_adaptor.scan_is_active() == False:
+                        if self.ble_adapter.scan_is_active() == False:
                             break
                     else:
-                        self.ble_adaptor.scan_stop() 
+                        self.ble_adapter.scan_stop() 
                         
-                    peripherals = self.ble_adaptor.scan_get_results()
+                    peripherals = self.ble_adapter.scan_get_results()
 
                     for p in peripherals:
                         if p.address() == self.address:
@@ -127,7 +126,7 @@ class BLE_Device:
                             pass
 
                     time.sleep(0.2)
-                    
+
                 else:
                     self.device.disconnect()
                     continue    # self.connect became false, but not received quit command

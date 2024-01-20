@@ -498,8 +498,8 @@ if __name__ == "__main__":
     
     lock = threading.Lock()
 
-    th1 = threading.Thread(target= device_heartRateSensor.connection_to_BLE_Device, args=(lock, dataContainer))
-    th2 = threading.Thread(target= device_turboTrainer.connection_to_BLE_Device, args=(lock, dataContainer))
+    th1 = threading.Thread(target= device_heartRateSensor.connection_to_BLE_Device, args=(adapter, lock, dataContainer))
+    th2 = threading.Thread(target= device_turboTrainer.connection_to_BLE_Device, args=(adapter, lock, dataContainer))
     th3 = threading.Thread(target= workoutManager.run, args=(device_turboTrainer, dataContainer))
 
     th1.start()
