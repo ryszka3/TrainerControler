@@ -29,7 +29,7 @@ except:
 
 if "HeartRateSensor" in config:
     try:
-        device_heartRateSensor.address = config["HeartRateSensor"]["Address"].lower()
+        device_heartRateSensor.address = config["HeartRateSensor"]["Address"].upper()
         device_heartRateSensor.name    = config["HeartRateSensor"]["Sensor_Name"]
         device_heartRateSensor.type    = config["HeartRateSensor"]["Sensor_Type"]
     except:
@@ -37,7 +37,7 @@ if "HeartRateSensor" in config:
     
 if "TurboTrainer" in config:
     try:
-        device_turboTrainer.address = config["TurboTrainer"]["Address"].lower()
+        device_turboTrainer.address = config["TurboTrainer"]["Address"].upper()
         device_turboTrainer.name    = config["TurboTrainer"]["Sensor_Name"]
         device_turboTrainer.type    = config["TurboTrainer"]["Sensor_Type"]
     except:
