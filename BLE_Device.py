@@ -53,7 +53,7 @@ class BLE_Device:
                 with lock:
                             
                     def onFound(per):
-                        if str(per.address()).upper == self.address:
+                        if str(per.address()).upper() == self.address:
                             self.ble_adapter.scan_stop()
 
                     self.ble_adapter.set_callback_on_scan_start(lambda: print("Scanning for ", self.name, "[", self.address,"]"))
@@ -73,7 +73,7 @@ class BLE_Device:
                     peripherals = self.ble_adapter.scan_get_results()
 
                     for p in peripherals:
-                        if str(p.address()).upper == self.address:
+                        if str(p.address()).upper() == self.address:
                             self.device = p
                             break
                     else:
