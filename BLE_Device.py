@@ -1,16 +1,13 @@
 import queue
 import threading
 import time
-import simplepyble
-#import csv # only for debugging
-#import datetime # only for debugging
 from   datatypes    import DataContainer, MinMaxIncrement, QueueEntry
 from   data_parsers import parse_hr_measurement, parse_indoor_bike_data
     
 
 
 class BLE_Device:
-    def __init__(self):
+    def __init__(self) -> None:
         self.address: str = None
         self.name: str = None
         self.type:str = None
@@ -38,7 +35,7 @@ class BLE_Device:
                                             "Message": message}))
 
 
-    def connection_to_BLE_Device(self, adapter, lock: threading.Lock, container: DataContainer):
+    def connection_to_BLE_Device(self, adapter, lock: threading.Lock, container: DataContainer) -> None:
         self.ble_adapter = adapter
         self.dataContainer = container
         print("starting task:", self.name)
@@ -56,7 +53,7 @@ class BLE_Device:
                 with lock:
                             
                     def onFound(per):
-                        if per.address() == self.address:
+                        if str(per.address()).upper == self.address:
                             self.ble_adapter.scan_stop()
 
                     self.ble_adapter.set_callback_on_scan_start(lambda: print("Scanning for ", self.name, "[", self.address,"]"))
@@ -76,18 +73,24 @@ class BLE_Device:
                     peripherals = self.ble_adapter.scan_get_results()
 
                     for p in peripherals:
-                        if p.address() == self.address:
+                        if str(p.address()).upper == self.address:
                             self.device = p
                             break
                     else:
                         print(self.name, " not found")
                         self.connectionState = False
-                        self.connect = False
+                        self.connect = False    ### this will force the next loop iter to go to "off" state and the lock is released
                         continue
                     
+                    
                     print("Connecting to ", self.name)
-
-                    self.device.connect()
+                    try:
+                        self.device.connect()
+                    except:
+                        print("Connection failed (", self.name, ")")
+                        self.connectionState = False
+                        self.connect = False
+                        continue
 
                     print("Connected to ", self.name)
                     self.connectionState = True
@@ -103,7 +106,11 @@ class BLE_Device:
                             entry: QueueEntry = self.queue.get(timeout = 0.2)
                             if entry.type == "Quit":
                                 self.connect = False
-                                self.device.disconnect()
+                                try:
+                                    self.device.disconnect()
+                                except:
+                                    pass
+
                                 break
                             elif entry.type == "Subscribe":
                                 if entry.data["Callback"] is None:
@@ -128,7 +135,11 @@ class BLE_Device:
                     time.sleep(0.2)
 
                 else:
-                    self.device.disconnect()
+                    try:
+                        self.device.disconnect()
+                    except:
+                        pass
+
                     continue    # self.connect became false, but not received quit command
 
                 # Quit received and broken out of while loop
@@ -146,17 +157,17 @@ class HeartRateMonitor(BLE_Device):
     UUID_HR_service: str = "0000180d-0000-1000-8000-00805f9b34fb"
     UUID_HR_measurement_char: str = "00002a37-0000-1000-8000-00805f9b34fb"
     
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def subscribeToHRService(self):
+    def subscribeToHRService(self) -> None:
         return super().subscribeToService(self.UUID_HR_service, self.UUID_HR_measurement_char, self.callback)
     
-    def unsubscribeFromService(self):
+    def unsubscribeFromService(self) -> None:
         return super().unsubscribeFromService(self.UUID_HR_service, self.UUID_HR_measurement_char)
     
 
-    def callback(self, data):
+    def callback(self, data) -> None:
         currentReading = parse_hr_measurement(data)
         self.dataContainer.momentary.heartRate = currentReading.bpm
  
@@ -172,15 +183,11 @@ class HeartRateMonitor(BLE_Device):
             zone = "Anaerobic"
             
         self.dataContainer.momentary.hrZone = zone
-        print(currentReading.bpm, zone)
 
 
 
 class FitnessMachine(BLE_Device):
    
-    
-    
-    
     UUID_speedCadenceSensorData           = "00002a5b-0000-1000-8000-00805f9b34fb" # (notify): 
     UUID_powerSensorData                  = "00002a63-0000-1000-8000-00805f9b34fb" # (notify): 
 
@@ -197,40 +204,40 @@ class FitnessMachine(BLE_Device):
     supported_resistance = MinMaxIncrement()
     supported_power = MinMaxIncrement()
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.remoteControlAcquired: bool = False
 
 
-    def subscribeToControlPoint(self):
+    def subscribeToControlPoint(self) -> None:
         super().subscribeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, self.callback_ftms_CP)
 
-    def unsubscribeFromControlPoint(self):
+    def unsubscribeFromControlPoint(self) -> None:
         super().unsubscribeFromService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char)
 
-    def subscribeToIndoorBikeData(self):
+    def subscribeToIndoorBikeData(self) -> None:
         super().subscribeToService(self.UUID_Fitness_Machine_service, self.UUID_indoor_bike_data_char, self.callback_IndoorBikeData)
 
-    def unsubscribeFromIndoorBikeData(self):
+    def unsubscribeFromIndoorBikeData(self) -> None:
         super().unsubscribeFromService(self.UUID_Fitness_Machine_service, self.UUID_indoor_bike_data_char)
 
-    def requestSupportedPower(self):
+    def requestSupportedPower(self) -> None:
         super().readFromService(self.UUID_Fitness_Machine_service, self.supported_power)
 
-    def requestSupportedResistance(self):
+    def requestSupportedResistance(self) -> None:
         super().readFromService(self.UUID_Fitness_Machine_service, self.supported_resistance)
 
-    def requestFeatures(self):
+    def requestFeatures(self) -> None:
         super().readFromService(self.UUID_Fitness_Machine_service, self.UUID_features_char)
 
-    def reset(self):
+    def reset(self) -> None:
         super().writeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, b"\x01")
         self.remoteControlAcquired = False
 
-    def requestControl(self):
+    def requestControl(self) -> None:
         super().writeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, b"\x00")
 
-    def start(self):
+    def start(self) -> None:
         super().writeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, b"\x07")
 
 
@@ -257,13 +264,13 @@ class FitnessMachine(BLE_Device):
                                    b"\x05" + setting.to_bytes(2, "little", signed=True))
 
 
-    def stop(self):
+    def stop(self) -> None:
         super().writeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, b"\x08\x01")
 
-    def pause(self):
+    def pause(self) -> None:
         super().writeToService(self.UUID_Fitness_Machine_service, self.UUID_control_point_char, b"\x08\x02")
     
-    def callback_ftms_CP(self, data):
+    def callback_ftms_CP(self, data) -> None:
             
         if data[0] == 0x80: # responce code has to be 0x80
             
@@ -284,17 +291,16 @@ class FitnessMachine(BLE_Device):
 
             print("Control point responce: (", data[1], ") -> ", result)
 
-    def callback_IndoorBikeData(self, data):
+    def callback_IndoorBikeData(self, data) -> None:
 
         parsedData = parse_indoor_bike_data(data)
-        print(parsedData)
         self.dataContainer.momentary.cadence = parsedData.instant_cadence
         self.dataContainer.momentary.power = parsedData.instant_power
         self.dataContainer.momentary.speed = parsedData.instant_speed
         self.dataContainer.updateAveragesAndMaximums()
 
 
-    def incomingMessageHandler(self, uuid, message):
+    def incomingMessageHandler(self, uuid, message) -> None:
         if   uuid == self.UUID_features_char:
             print("Features: ", message, "\n")
 

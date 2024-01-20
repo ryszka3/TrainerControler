@@ -150,7 +150,7 @@ class WorkoutManager():
                         elif entry.type == "Freeride":
                             self.state = "WARMUP-FREERIDE"
                         
-                        TurboTrainer.subscribeToControlPoint    # Need to be receiving control point notifications
+                        TurboTrainer.subscribeToControlPoint()    # Need to be receiving control point notifications
                         
                         for i in range(3):
                             
