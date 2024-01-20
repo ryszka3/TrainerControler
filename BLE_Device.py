@@ -146,8 +146,8 @@ class HeartRateMonitor(BLE_Device):
     UUID_HR_service: str = "0000180d-0000-1000-8000-00805f9b34fb"
     UUID_HR_measurement_char: str = "00002a37-0000-1000-8000-00805f9b34fb"
     
-    def __init__(self, BLE_Adaptor):
-        super().__init__(BLE_Adaptor)
+    def __init__(self):
+        super().__init__()
 
     def subscribeToHRService(self):
         return super().subscribeToService(self.UUID_HR_service, self.UUID_HR_measurement_char, self.callback)
@@ -197,8 +197,8 @@ class FitnessMachine(BLE_Device):
     supported_resistance = MinMaxIncrement()
     supported_power = MinMaxIncrement()
 
-    def __init__(self, BLE_Adaptor):
-        super().__init__(BLE_Adaptor)
+    def __init__(self):
+        super().__init__()
         self.remoteControlAcquired: bool = False
 
 
