@@ -1,6 +1,9 @@
 import asyncio
 import configparser
 import queue
+import threading
+import time
+import simplepyble
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
@@ -8,7 +11,7 @@ from   screen      import ScreenManager, TouchScreen
 
 
 userList               = UserList()
-dataAndFlagContainer   = DataContainer()
+dataContainer   = DataContainer()
 device_heartRateSensor = HeartRateMonitor()
 device_turboTrainer    = FitnessMachine()
 workoutManager         = WorkoutManager()
@@ -26,7 +29,7 @@ except:
 
 if "HeartRateSensor" in config:
     try:
-        device_heartRateSensor.address = config["HeartRateSensor"]["Address"]
+        device_heartRateSensor.address = config["HeartRateSensor"]["Address"].upper()
         device_heartRateSensor.name    = config["HeartRateSensor"]["Sensor_Name"]
         device_heartRateSensor.type    = config["HeartRateSensor"]["Sensor_Type"]
     except:
@@ -34,7 +37,7 @@ if "HeartRateSensor" in config:
     
 if "TurboTrainer" in config:
     try:
-        device_turboTrainer.address = config["TurboTrainer"]["Address"]
+        device_turboTrainer.address = config["TurboTrainer"]["Address"].upper()
         device_turboTrainer.name    = config["TurboTrainer"]["Sensor_Name"]
         device_turboTrainer.type    = config["TurboTrainer"]["Sensor_Type"]
     except:
@@ -63,29 +66,6 @@ class Supervisor:
         self.activeUserID = 0
         self.sleepDuration = 0.02
 
-    async def loop(self):
-        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
-        await asyncio.sleep(20.0)
-        print("end Wait1")
-        if device_heartRateSensor.connectionState == True:
-            device_heartRateSensor.subscribeToService()
-        #if device_turboTrainer.connectionState == True:
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-
-        print(workoutManager.workouts.getWorkoutNames())
-        workoutManager.startWorkout(1)
-        await asyncio.sleep(30.0)
-        while workoutManager.state != "IDLE":
-            await asyncio.sleep(1) 
-
-        userList.updateUserRecord(userID=self.activeUserID,
-                                  noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
-                                  distance = dataAndFlagContainer.distance,
-                                  energy = dataAndFlagContainer.totalEnergy)
-        
-        dataAndFlagContainer.programRunningFlag = False
-        print("Supervisor Closed")
-
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
         
         x_touch, y_touch = touchPoint
@@ -98,9 +78,9 @@ class Supervisor:
         return False
 
 
-    async def loopy(self):
+    def loop(self):
 
-        lcd.assignDataContainer(dataAndFlagContainer)
+        lcd.assignDataContainer(dataContainer)
         
         while True:     #### Main loop
             if self.state == "MainMenu":
@@ -108,7 +88,7 @@ class Supervisor:
                 touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
                 loopCounter: int = 0
                 MAX_COUNT = 5
-                await asyncio.sleep(1.0)    ## Deadzone for touch
+                time.sleep(1.0)    ## Deadzone for touch
                 while self.state == "MainMenu":
                     
                     heartFillColour = lcd.COLOUR_HEART
@@ -139,13 +119,13 @@ class Supervisor:
                         #### no TT connection, display error message, cancel state change
                         lcd.drawConnectionErrorMessage()
                         self.state = "MainMenu"
-                        await asyncio.sleep(4.0)
+                        time.sleep(4.0)
                         
                     
                     lcd.drawPageMainMenu(heartFillColour, TTFillColour)
                     
                     loopCounter = (loopCounter + 1) % MAX_COUNT
-                    await asyncio.sleep(self.sleepDuration)
+                    time.sleep(self.sleepDuration)
 
             if self.state == "RideProgram":
 
@@ -159,19 +139,19 @@ class Supervisor:
                     #### if coming from prog select then start the workout
                     print("Loop: will be starting program no: ", self.selectedProgram)
                     if device_heartRateSensor.connectionState == True:
-                        device_heartRateSensor.subscribeToService()
+                        device_heartRateSensor.subscribeToHRService()
                     if device_turboTrainer.connectionState == True:
-                        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+                        device_turboTrainer.subscribeToIndoorBikeData()
                     
                     workoutManager.startWorkout(self.selectedProgram)
                     #### wait for the workout manager to start the program
                     while workoutManager.state == "IDLE":
-                        await asyncio.sleep(self.sleepDuration)
+                        time.sleep(self.sleepDuration)
                     
                     print("Program execution loop, workout manager state: ", workoutManager.state)
 
                     touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
-                    await asyncio.sleep(1.0)    ## Deadzone for touch
+                    time.sleep(1.0)    ## Deadzone for touch
                     while workoutManager.state != "IDLE":
                         touch, location = touchScreen.checkTouch()
                         if touch == True:
@@ -183,7 +163,7 @@ class Supervisor:
                                     if value == "End":
                                         ## do end of program routines
                                         workoutManager.queue.put(QueueEntry("End", 0))
-                                        device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
+                                        device_turboTrainer.unsubscribeFromIndoorBikeData()
 
                                         ## then go to the main menu
                                         self.state = "MainMenu"
@@ -196,13 +176,13 @@ class Supervisor:
                                         workoutManager.queue.put(QueueEntry("Start", 0))
 
                         lcd.drawPageWorkout("Program", workoutManager.state)
-                        await asyncio.sleep(self.sleepDuration)
+                        time.sleep(self.sleepDuration)
                     #### program has ended
                     print("Execution loop has finished!")
                     userList.updateUserRecord(userID=self.activeUserID,
-                                                noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
-                                                distance = dataAndFlagContainer.distance,
-                                                energy = dataAndFlagContainer.totalEnergy)
+                                                noWorkouts=dataContainer.activeUser.noWorkouts + 1,
+                                                distance = dataContainer.distance,
+                                                energy = dataContainer.totalEnergy)
                     
                     self.selectedProgram = None
                     self.oldState = self.state
@@ -227,7 +207,7 @@ class Supervisor:
                     editedSegment = WorkoutSegment()
                     selectedSegmentID = None
                     touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                    await asyncio.sleep(1.0)    ## Deadzone for touch
+                    time.sleep(1.0)    ## Deadzone for touch
                     while self.state == "ProgEdit":
                         
                         touch, location = touchScreen.checkTouch()
@@ -305,12 +285,12 @@ class Supervisor:
                                                 
                                                 break   ## exits while loop if clicked on a valid button
 
-                                            await asyncio.sleep(self.sleepDuration)
+                                            time.sleep(self.sleepDuration)
 
 
                             touchActiveRegions = lcd.drawProgramEditor(editedWorkoutProgram, selectedSegmentID, editedSegment)
-                            await asyncio.sleep(0.5)    ## Deadzone for touch
-                        await asyncio.sleep(self.sleepDuration)
+                            time.sleep(0.5)    ## Deadzone for touch
+                        time.sleep(self.sleepDuration)
 
             if self.state == "ProgSelect":
 
@@ -333,7 +313,7 @@ class Supervisor:
 
                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-                await asyncio.sleep(1.0)    ## Deadzone for touch
+                time.sleep(1.0)    ## Deadzone for touch
                 while self.state == "ProgSelect":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
@@ -374,13 +354,13 @@ class Supervisor:
                                 workoutParametres = workoutManager.workouts.getListOfWorkoutParametres(displayedPrograms)
                                 touchActiveRegions = lcd.drawProgramSelector(workoutParametres, previousEnabled=showPrevPageButton, 
                                                                 nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
-                                await asyncio.sleep(1.0)    ## Deadzone for touch  
-                    await asyncio.sleep(self.sleepDuration)
+                                time.sleep(1.0)    ## Deadzone for touch  
+                    time.sleep(self.sleepDuration)
 
             if self.state == "Settings":
                 print("state: ", self.state)
                 touchActiveRegions = lcd.drawPageSettings()
-                await asyncio.sleep(1.0)    ## Deadzone for touch
+                time.sleep(1.0)    ## Deadzone for touch
                 while self.state == "Settings":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
@@ -393,7 +373,7 @@ class Supervisor:
                                 self.state = value
                                 break
 
-                    await asyncio.sleep(self.sleepDuration)
+                    time.sleep(self.sleepDuration)
 
             if self.state == "Calibrate":    ## screen alibration
 
@@ -411,7 +391,7 @@ class Supervisor:
                         if measuredP1 is None: # first point 
                             measuredP1 = location
                             lcd.drawPageCalibration(point2)
-                            await asyncio.sleep(1.0)
+                            time.sleep(1.0)
 
                         else:
                             measuredP2 = location
@@ -430,9 +410,9 @@ class Supervisor:
                             lcd.drawMessageBox("Calibration applied!", ("OK",))
                             self.oldState = self.state
                             self.state = "MainMenu"
-                            await asyncio.sleep(3)
+                            time.sleep(3)
 
-                    await asyncio.sleep(self.sleepDuration)    
+                    time.sleep(self.sleepDuration)    
 
             if self.state == "Trainer":
                 print("state: ", self.state)
@@ -472,7 +452,7 @@ class Supervisor:
                     showNextPageButton = True
 
                 touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
-                await asyncio.sleep(1.0)    ## Deadzone for touch
+                time.sleep(1.0)    ## Deadzone for touch
                 while self.state == "UserChange":
                     touch, location = touchScreen.checkTouch()
                     if touch == True:
@@ -489,15 +469,15 @@ class Supervisor:
                                 
                                 else:
                                     self.activeUserID = value
-                                    dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+                                    dataContainer.assignUser(userList.listOfUsers[self.activeUserID])
 
                                     self.oldState = self.state
                                     self.state = "MainMenu"
                                 
 
-                    await asyncio.sleep(self.sleepDuration)
+                    time.sleep(self.sleepDuration)
             
-            if dataAndFlagContainer.programRunningFlag == False:
+            if dataContainer.programRunningFlag == False:
                 break                               
            
         print("End of main loop")
@@ -506,19 +486,29 @@ class Supervisor:
     
 supervisor = Supervisor()
 
-async def main():
-   
-    lock = asyncio.Lock()
-
-    await asyncio.gather(
-        device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
-        device_turboTrainer.   connection_to_BLE_Device(lock, dataAndFlagContainer),
-        supervisor.loopy(),
-        workoutManager.run(device_turboTrainer, dataAndFlagContainer)
-    )
-
 
 ####    Trigger Main    ####
 if __name__ == "__main__":
-    asyncio.run(main())
+    adapters = simplepyble.Adapter.get_adapters()
+
+    if len(adapters) == 0:
+        print("No adapters found")
+    elif len(adapters) == 1:
+        adapter = adapters[0]
+    
+    lock = threading.Lock()
+
+    th1 = threading.Thread(target= device_heartRateSensor.connection_to_BLE_Device, args=(adapter, lock, dataContainer))
+    th2 = threading.Thread(target= device_turboTrainer.connection_to_BLE_Device, args=(adapter, lock, dataContainer))
+    th3 = threading.Thread(target= workoutManager.run, args=(device_turboTrainer, dataContainer))
+
+    th1.start()
+    th2.start()
+    th3.start()
+
+    supervisor.loop()
+
+    th1.join()
+    th2.join()
+    th3.join()
 

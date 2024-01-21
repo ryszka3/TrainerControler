@@ -785,7 +785,7 @@ class ScreenManager:
                     "BPM": str(round(self.dataContainer.momentary.heartRate,0)), 
                     "Average":str(round(self.dataContainer.average.heartRate,0)), 
                     "Max":str(round(self.dataContainer.max.heartRate,0)),
-                    "Zone": str(round(self.dataContainer.momentary.hrZone,0))}}
+                    "Zone": self.dataContainer.momentary.hrZone}}
 
         all_sections: tuple = (section1, section2, section3, section4)
         section_height = self.HEIGHT * 3 / 4 / len(all_sections)
