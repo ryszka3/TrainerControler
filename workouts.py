@@ -3,7 +3,6 @@ import queue
 import datetime
 import time
 import csv
-import asyncio
 from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
 from   BLE_Device  import FitnessMachine
 from   TCX         import TCXWriter
@@ -121,7 +120,7 @@ class WorkoutManager():
     def startWorkout(self, workoutID):
         self.queue.put(QueueEntry("Start", workoutID))
     
-    async def run(self, TurboTrainer: FitnessMachine, container: DataContainer):
+    def run(self, TurboTrainer: FitnessMachine, container: DataContainer):
         
         self.dataContainer = container
         print("starting workout manager")
@@ -151,7 +150,7 @@ class WorkoutManager():
                         elif entry.type == "Freeride":
                             self.state = "WARMUP-FREERIDE"
                         
-                        TurboTrainer.subscribeToService(TurboTrainer.UUID_control_point)    # Need to be receiving control point notifications
+                        TurboTrainer.subscribeToControlPoint()    # Need to be receiving control point notifications
                         
                         for i in range(3):
                             
@@ -163,7 +162,7 @@ class WorkoutManager():
 
                             #wait until device command queue empty but max 3 seconds
                             for j in range(6):
-                                await asyncio.sleep(0.5)
+                                time.sleep(0.5)
                                 if TurboTrainer.queue.empty() == True:
                                     break
 
@@ -198,11 +197,11 @@ class WorkoutManager():
                             self.TCX_Object = TCXWriter()
                     
                 else:
-                    await asyncio.sleep(0.1)
+                    time.sleep(0.1)
             
             if self.state in ("WARMUP-PROGRAM", "WARMUP-FREERIDE"):
                 
-                await asyncio.sleep(3.0)
+                time.sleep(3.0)
                 self.state = self.state.removeprefix("WARMUP-")
                 self.workoutStartTime = time.time()
 
@@ -213,7 +212,7 @@ class WorkoutManager():
                         TurboTrainer.start()
                         self.state = "PROGRAM"
                 else:
-                    await asyncio.sleep(0.1)
+                    time.sleep(0.1)
 
 
             if self.state in ("PROGRAM", "FREERIDE"):
@@ -279,7 +278,7 @@ class WorkoutManager():
                     if self.writeToTCX == True:
                         self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance*1000, data=self.dataContainer.momentary)
                 
-                await asyncio.sleep(0.01)
+                time.sleep(0.01)
         
             if self.state == "STOP":
                 print("Ending  program")
@@ -307,7 +306,7 @@ class WorkoutManager():
 
 
                 #### Release the fitnes machine
-                TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)
+                TurboTrainer.unsubscribeFromControlPoint()
                 TurboTrainer.stop()
                 TurboTrainer.reset()
         else:
