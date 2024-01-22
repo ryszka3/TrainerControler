@@ -1,17 +1,19 @@
 import xml.etree.ElementTree as ET
-from datatypes import TCXLap, Dataset
+from datatypes import TCXLap, Dataset, DataContainer
 import datetime
 
-class TXCWriter:
+class TCXWriter:
 
     def __init__(self) -> None:
+        ET.register_namespace("", "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2")
         self.root  = ET.Element("TrainingCenterDatabase", attrib={"xsi:schemaLocation":"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd",
                                                      "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                                                     "xmlns": "http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
                                                      })
         self.activities = ET.SubElement(self.root, "Activities")
         self.activity = ET.SubElement(self.activities, "Activity", Sport="Biking")
         self.Id = ET.SubElement(self.activity, 'Id')
-        self.Id.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%S")
+        self.Id.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ")
         self.listOfLaps = list()
 
 
@@ -34,7 +36,7 @@ class TXCWriter:
 
     def newLap(self):
         newLap = TCXLap()
-        newLap.lap = ET.SubElement(self.activity, "Lap", StartTime=self.Id.text)
+        newLap.lap = ET.SubElement(self.activity, "Lap", StartTime=datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ"))
 
         newLap.totalTimeSeconds = ET.SubElement(newLap.lap, "TotalTimeSeconds")
         newLap.totalTimeSeconds.text = str(720)
@@ -66,20 +68,34 @@ class TXCWriter:
 
         self.listOfLaps.append(newLap)
 
-    def updateLapValues(self, newparams, LapID = None):
+    def updateLapValues(self, dataContainer: DataContainer, LapID = None):
         
         if LapID is None: ## then use most current lap
             LapID = len(self.listOfLaps)-1 
 
         lap: TCXLap = self.listOfLaps[LapID]
+        
+        if LapID > 0:
+            previousLap: TCXLap = self.listOfLaps[LapID-1]
+            previousLapEnergy = previousLap.calories * 4.184    ## kJ
+            previousLapdistance = previousLap.distanceMeters
+            previousLapTime = previousLap.totalTimeSeconds
 
-        lap.calories = 1
-        lap.distanceMeters = 7
-        lap.totalTimeSeconds = 32
-        lap.maximumSpeed  =43
-        lap.maxHRValue = 134
-        lap.averageHRValue = 110
+        else:
+            previousLapEnergy = 0
+            previousLapdistance = 0
+            previousLapTime = 0
 
+        energy_kJ   = dataContainer.totalEnergy - previousLapEnergy
+        distance_m = dataContainer.distance * 1000 - previousLapdistance
+        time_s      = dataContainer.workoutTime - previousLapTime
+
+        lap.calories = energy_kJ / 4.184   #kcal
+        lap.distanceMeters = distance_m * 1000
+        lap.totalTimeSeconds = time_s
+        lap.maximumSpeed  = dataContainer.lapMax.speed
+        lap.maxHRValue = dataContainer.lapMax.heartRate
+        lap.averageHRValue = dataContainer.lapAverage.heartRate
 
 
     def addTrackPoint(self, distance, data: Dataset, LapID=None):
@@ -93,7 +109,7 @@ class TXCWriter:
         point = ET.SubElement(self.listOfLaps[LapID].track, "Trackpoint")
 
         Time = ET.SubElement(point, "Time")
-        Time.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%S")
+        Time.text = datetime.datetime.now().strftime("%Y-%m-%dT%H:%m:%SZ")
 
         DistanceMeters = ET.SubElement(point, "DistanceMeters")
         DistanceMeters.text = str(distance)

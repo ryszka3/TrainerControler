@@ -5,7 +5,7 @@ import time
 import csv
 from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
 from   BLE_Device  import FitnessMachine
-from   TCX         import TXCWriter
+from   TCX         import TCXWriter
 
 
 class Workouts:
@@ -111,7 +111,7 @@ class WorkoutManager():
         self.SAVEPERIOD = float(1.0)
         self.writeToTCX: bool = True
         self.filename = None
-        self.TCX_Object: TXCWriter = None
+        self.TCX_Object: TCXWriter = None
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -194,8 +194,7 @@ class WorkoutManager():
                             raise Exception("Failed creating a workout data file!")
                         
                         if self.writeToTCX == True:
-                            self.TCX_Object = TXCWriter()
-                            self.TCX_Object.newLap()
+                            self.TCX_Object = TCXWriter()
                     
                 else:
                     time.sleep(0.1)
@@ -250,16 +249,18 @@ class WorkoutManager():
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
                             
                             if self.writeToTCX == True:
-                                self.TCX_Object.updateLapValues("New params here")
+                                self.TCX_Object.updateLapValues(self.dataContainer)
+                                
                                 self.TCX_Object.newLap()
+                                self.dataContainer.clearLapValues()
                             
-                            print("new segment, type:", self.dataContainer.currentSegment.segmentType, 
+                            print("New segment, type:", self.dataContainer.currentSegment.segmentType, 
                                   " Duration: ", self.dataContainer.currentSegment.duration,
                                   " Setting: ", self.dataContainer.currentSegment.setting,
                                   " Start time: ", self.dataContainer.currentSegment.startTime)
                         
                         else:
-                            print("end of workout")
+                            print("End of workout")
                             self.state = "STOP"
                     
 
@@ -275,7 +276,7 @@ class WorkoutManager():
                     self.dataContainer.totalEnergy += self.dataContainer.momentary.power * self.SAVEPERIOD / 1000 # kJ
 
                     if self.writeToTCX == True:
-                        self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance, data=self.dataContainer.momentary)
+                        self.TCX_Object.addTrackPoint(distance=self.dataContainer.distance*1000, data=self.dataContainer.momentary)
                 
                 time.sleep(0.01)
         

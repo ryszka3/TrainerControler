@@ -194,33 +194,57 @@ class DataContainer:
         self.workoutDuration = int(0)
         self.momentary: Dataset = Dataset()
         self.average: Dataset = Dataset()
+        self.lapAverage: Dataset = Dataset()
         self.max: Dataset = Dataset()
-        self.NoAverage = int(0)
+        self.lapMax: Dataset = Dataset()
+        self.NoAverages = int(0)
+        self.lapNoAverages = int(0)
         self.programRunningFlag = bool(True)
         self.activeUser: User = None
         self.currentSegment: WorkoutSegment = WorkoutSegment("Power", 0, 100)
-        self.distance = float(0)
-        self.totalEnergy = float(0)
+        self.distance = float(0)    ## km
+        self.totalEnergy = float(0) ## kJ
 
     def assignUser(self, user):
         self.activeUser = user
 
-    def updateAveragesAndMaximums(self):
-        #### Update averages:
-        newNoAverage = self.NoAverage + 1
-        self.average.cadence = (self.momentary.cadence +(self.NoAverage * self.average.cadence)) / newNoAverage
-        self.average.power = (self.momentary.power +(self.NoAverage * self.average.power)) / newNoAverage
-        self.average.heartRate = (self.momentary.heartRate +(self.NoAverage * self.average.heartRate)) / newNoAverage
-        self.average.gradient = (self.momentary.gradient +(self.NoAverage * self.average.gradient)) / newNoAverage
-        self.average.speed = (self.momentary.speed +(self.NoAverage * self.average.speed)) / newNoAverage
-        self.NoAverage += 1
+    def clearLapValues(self):
+        self.lapNoAverages = 0
+        self.lapMax = Dataset()
+        self.lapAverage = Dataset()
 
-        #### Update Maximums:
+    def updateAveragesAndMaximums(self):
+        #### Update Gloabal Averages:
+        newNoAverage = self.NoAverages + 1
+        self.average.cadence = (self.momentary.cadence +(self.NoAverages * self.average.cadence)) / newNoAverage
+        self.average.power = (self.momentary.power +(self.NoAverages * self.average.power)) / newNoAverage
+        self.average.heartRate = (self.momentary.heartRate +(self.NoAverages * self.average.heartRate)) / newNoAverage
+        self.average.gradient = (self.momentary.gradient +(self.NoAverages * self.average.gradient)) / newNoAverage
+        self.average.speed = (self.momentary.speed +(self.NoAverages * self.average.speed)) / newNoAverage
+        self.NoAverages += 1
+
+        #### Update Lap Averages:
+        newLapNoAverage = self.lapNoAverages + 1
+        self.lapAverage.cadence = (self.momentary.cadence +(self.lapNoAverages * self.lapAverage.cadence)) / newLapNoAverage
+        self.lapAverage.power = (self.momentary.power +(self.lapNoAverages * self.lapAverage.power)) / newLapNoAverage
+        self.lapAverage.heartRate = (self.momentary.heartRate +(self.lapNoAverages * self.lapAverage.heartRate)) / newLapNoAverage
+        self.lapAverage.gradient = (self.momentary.gradient +(self.lapNoAverages * self.lapAverage.gradient)) / newLapNoAverage
+        self.lapAverage.speed = (self.momentary.speed +(self.lapNoAverages * self.lapAverage.speed)) / newLapNoAverage
+        self.lapNoAverages += 1
+
+        #### Update Global Maximums:
         self.max.cadence = max(self.max.cadence, self.momentary.cadence)
         self.max.power =  max(self.max.power, self.momentary.power)
         self.max.heartRate = max(self.max.heartRate, self.momentary.heartRate)
         self.max.gradient = max(self.max.gradient, self.momentary.gradient)
         self.max.speed = max(self.max.speed, self.momentary.speed)
+
+        #### Update Lap Maximums:
+        self.lapMax.cadence = max(self.lapMax.cadence, self.momentary.cadence)
+        self.lapMax.power =  max(self.lapMax.power, self.momentary.power)
+        self.lapMax.heartRate = max(self.lapMax.heartRate, self.momentary.heartRate)
+        self.lapMax.gradient = max(self.lapMax.gradient, self.momentary.gradient)
+        self.lapMax.speed = max(self.lapMax.speed, self.momentary.speed)
         
 
     def getIterableRecord(self):
