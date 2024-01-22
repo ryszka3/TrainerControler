@@ -73,6 +73,9 @@ class TCXWriter:
         if LapID is None: ## then use most current lap
             LapID = len(self.listOfLaps)-1 
 
+        if LapID < 0:   ## No laps added yet
+            return
+
         lap: TCXLap = self.listOfLaps[LapID]
         
         if LapID > 0:
