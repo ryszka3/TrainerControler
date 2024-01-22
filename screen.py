@@ -824,6 +824,8 @@ class ScreenManager:
             
             X_Pos += 20
             for key in section["labels"]:
+                
+                spacing = ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
 
                 font = ImageFont.truetype(font=self.font_name, size=8)
                 draw.text(xy = (X_Pos, Y_Pos+35),
@@ -832,8 +834,12 @@ class ScreenManager:
                         font = font,
                         anchor="mm")
                 
+                font_size = 16
+                font = ImageFont.truetype(font=self.font_name, size=font_size)
+                while font.getlength(str(section["labels"][key])) > spacing - 4:
+                    font_size -= 1
+                    font = ImageFont.truetype(font=self.font_name, size=font_size)
 
-                font = ImageFont.truetype(font=self.font_name, size=16)
                 draw.text(xy = (X_Pos, Y_Pos+15),
                         text = str(section["labels"][key]),
                         fill = self.COLOUR_TEXT_LIGHT,
@@ -841,7 +847,7 @@ class ScreenManager:
                         anchor="mm")
 
                 # calculate spacing accordinly:
-                X_Pos += ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
+                X_Pos += spacing
             
             Y_Pos += section_height
 
