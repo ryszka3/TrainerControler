@@ -6,18 +6,19 @@ import SPI
 from   XPT2046 import Touch
 
 from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList
-from workouts  import Workouts
 
-def formatTime(dur: int) -> str:
-    minutes: int = int(dur / 60)
+def formatTime(duration: int) -> str:
+    duration = round(duration)
+    
+    minutes: int = int(duration / 60)
     hours:int = int(minutes / 60)
     minutes -= hours * 60
-    seconds = dur - hours * 60 * 60 -minutes * 60
+    seconds = duration - hours * 60 * 60 -minutes * 60
     
     ret = str()
-    if hours < 10:
-        ret += "0"
-    ret += str(hours) + ":"
+    if hours > 0:
+        ret += str(hours) + ":"
+
     if minutes < 10:
         ret += "0"
     ret += str(minutes) + ":"
@@ -43,7 +44,7 @@ class TouchScreen:
         self.setCalibration(0.176264, -14.6438, 0.133167, -12.7923)   # default calibration, to be overwriten with values loaded from config
 
     
-    def setCalibration(self, x_multiplier: float, x_offset: float, y_multiplier: float, y_offset: float):
+    def setCalibration(self, x_multiplier: float, x_offset: float, y_multiplier: float, y_offset: float) -> None:
         
         self.x_multiplier = x_multiplier
         self.x_offset = x_offset
@@ -52,7 +53,7 @@ class TouchScreen:
         self.y_offset = y_offset
     
 
-    def scaleCoordinates(self, point: tuple):
+    def scaleCoordinates(self, point: tuple) -> None:
         """Scales raw X,Y values to match the LCD screen pixel dimensions."""
         a, b = point
         x = self.WIDTH  - int(self.x_multiplier * b + self.x_offset)
@@ -141,7 +142,7 @@ class ScreenManager:
 
         #self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
 
-    def assignDataContainer (self, container: DataContainer):
+    def assignDataContainer (self, container: DataContainer) -> None:
         self.dataContainer:DataContainer = container
     
 
@@ -437,7 +438,8 @@ class ScreenManager:
         self.display.display()
         return touchActiveRegions
 
-    def drawProgramSelector(self, listOfParametres: list, previousEnabled: bool = False, nextEnabled: bool = False, newProgramEnabled: bool = True) -> tuple:
+    def drawProgramSelector(self, listOfParametres: list, previousEnabled: bool = False, 
+                            nextEnabled: bool = False, newProgramEnabled: bool = True) -> tuple:
         
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
@@ -695,26 +697,26 @@ class ScreenManager:
         box_width = (self.WIDTH - self.MARGIN_LARGE * (noBoxes+1))/noBoxes
         box_height = 45
 
-        box_Labels = (("Elapsed Time:", str(round(self.dataContainer.workoutTime,0)), 
-                                        str(round(self.dataContainer.currentSegment.elapsedTime,0))),
+        box_Labels = (("Elapsed Time:", formatTime(self.dataContainer.workoutTime), 
+                                        formatTime(self.dataContainer.currentSegment.elapsedTime)),
                       (workoutType,),
-                      ("Remaining Time:", str(round(self.dataContainer.workoutDuration - self.dataContainer.workoutTime,0)),
-                                          str(round(self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime,0)))
+                      ("Remaining Time:", formatTime(self.dataContainer.workoutDuration - self.dataContainer.workoutTime),
+                                          formatTime(self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
                      )
 
         for i in range(noBoxes):
-            box_xy = ((self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), self.MARGIN_SMALL), 
+            box_xy = ((self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), 0), 
                       (self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE) + box_width, self.MARGIN_SMALL+box_height))
             
             box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
             
-            font = ImageFont.truetype(font=self.font_name, size=10)
+            font = ImageFont.truetype(font=self.font_name, size=12)
             
-            draw.text(xy = (box_centre_xy[0], box_centre_xy[1]-12), 
+            draw.text(xy = (box_centre_xy[0], box_xy[0][1]+3), 
                     text = box_Labels[i][0], # Box title
                     fill = self.COLOUR_TEXT_LIGHT,
                     font = font,
-                    anchor="mm")
+                    anchor="mt")
             
             if i == 1:  # central box, 
                 
@@ -750,17 +752,31 @@ class ScreenManager:
                 # no extra info to print, skip the rest of the iteration
                 continue
 
-            font = ImageFont.truetype(font=self.font_name, size=9)
+            font = ImageFont.truetype(font=self.font_name, size=11)
 
-            draw.text(xy = (box_centre_xy[0] - box_width / 2 + 7, box_centre_xy[1]+5), 
-                    text = "Total:    " + str(box_Labels[i][1]), # total
+            valuesOffset = max(font.getlength("Segment:"), font.getlength("Total:")) + font.getlength("  ")
+
+            draw.text(xy = (box_centre_xy[0] - box_width / 2 , box_centre_xy[1]+8), 
+                    text = "Total:", # total
                     fill = self.COLOUR_TEXT_LIGHT,
                     font = font,
                     anchor="lm")
             
-            draw.text(xy = (box_centre_xy[0] - box_width / 2 + 7, box_centre_xy[1]+17), 
-                    text = "Segment:  "+ str(box_Labels[i][2]), # Segment
+            draw.text(xy = (int(box_centre_xy[0] - box_width / 2 + valuesOffset), box_centre_xy[1]+8), 
+                    text = str(box_Labels[i][1]), # total
+                    fill = self.COLOUR_OUTLINE,
+                    font = font,
+                    anchor="lm")
+            
+            draw.text(xy = (box_centre_xy[0] - box_width / 2, box_centre_xy[1]+24), 
+                    text = "Segment: ",
                     fill = self.COLOUR_TEXT_LIGHT,
+                    font = font,
+                    anchor="lm")
+            
+            draw.text(xy = (box_centre_xy[0] - box_width / 2 + valuesOffset, box_centre_xy[1]+24), 
+                    text = str(box_Labels[i][2]), # Segment
+                    fill = self.COLOUR_OUTLINE,
                     font = font,
                     anchor="lm")
 
@@ -832,7 +848,8 @@ class ScreenManager:
         self.display.display()
         return touchActiveRegions
 
-    def drawPageUserSelect(self, userList: UserList, displayRange: tuple, previousEnabled: bool = False, nextEnabled: bool = False) -> tuple:
+    def drawPageUserSelect(self, userList: UserList, displayRange: tuple, 
+                           previousEnabled: bool = False, nextEnabled: bool = False) -> tuple:
         
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
@@ -953,9 +970,10 @@ class ScreenManager:
 
         stateMachineStates = ("UserChange", "History", "Settings", "ProgEdit", "RideProgram", "Freeride", "ProgSelect")
         
-        DEVICES_HEIGHT = 23
-        heartImage: Image   = self.drawHeart(DEVICES_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
-        trainerImage: Image = self.drawTrainer(DEVICES_HEIGHT, colour_trainer, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        HEART_HEIGHT = 23
+        TRAINER_HEIGHT = 27
+        heartImage: Image   = self.drawHeart(HEART_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        trainerImage: Image = self.drawTrainer(TRAINER_HEIGHT, colour_trainer, self.COLOUR_OUTLINE, self.COLOUR_BG)
         #climberImage: Image = self.drawClimber(DEVICES_HEIGHT, colour_climber, self.COLOUR_OUTLINE, self.COLOUR_BG)
         
         Y_Pos = self.MARGIN_LARGE
@@ -970,7 +988,7 @@ class ScreenManager:
         #X_Pos = int(self.MARGIN_LARGE*2.5 + 2*box_width -climberImage.width/2)
         #self.im.paste(climberImage, (X_Pos, Y_Pos))
 
-        Y_Pos = DEVICES_HEIGHT + 3 * self.MARGIN_LARGE
+        Y_Pos = HEART_HEIGHT + 3 * self.MARGIN_LARGE
         X_Pos = self.MARGIN_LARGE
         for i, zipped in enumerate(zip(box_labels, stateMachineStates)):
             
@@ -996,7 +1014,7 @@ class ScreenManager:
         return touchActiveRegions
 
 
-    def drawConnectionErrorMessage(self):
+    def drawConnectionErrorMessage(self) -> None:
         WIDTH = 150
         HEIGHT = 68
         
@@ -1124,9 +1142,9 @@ class ScreenManager:
 if __name__ == "__main__":
     
     data = DataContainer()
-    data.currentSegment = WorkoutSegment("power", 24, 110)
+    data.currentSegment = WorkoutSegment("power", 650, 110)
     data.currentSegment.elapsedTime = 5
-    data.workoutDuration = 60
+    data.workoutDuration = 1241
     data.workoutTime = 20
 
     lcd = ScreenManager()
@@ -1134,17 +1152,18 @@ if __name__ == "__main__":
     #lcd.drawPageWorkout("Program", "PROGRAM")
     #lcd.drawPageMainMenu(lcd.COLOUR_BG_LIGHT, lcd.COLOUR_BG_LIGHT)
     #lcd.drawHeart(21, colour_outline=(250,240,240), colour_fill=(207,17,17), colour_bg=(0,0,0))
-    #lcd.drawTrainer(21, colour_outline=lcd.COLOUR_OUTLINE, colour_fill=lcd.COLOUR_TT, colour_bg=lcd.COLOUR_BG)
+    #image:Image =lcd.drawTrainer(21, colour_outline=lcd.COLOUR_OUTLINE, colour_fill=lcd.COLOUR_TT, colour_bg=lcd.COLOUR_BG)
+    #image.show()
     #lcd.drawConnectionErrorMessage()
+    #from workouts import Workouts
+    #workouts = Workouts()
 
-    workouts = Workouts()
-
-    seg = WorkoutSegment(segType="Power", dur=185, set="180")
+    #seg = WorkoutSegment(segType="Power", dur=185, set="180")
 
     #lcd.drawProgramSelector(workouts.getListOfWorkoutParametres((0,2)), True)
     #lcd.drawProgramEditor(workouts.getWorkout(1),1,editedSegment=seg)
     #lcd.drawPageCalibration((20,20))
     #lcd.drawPageSettings()
-    from datatypes import UserList
-    my=UserList()
-    lcd.drawPageUserSelect(userList=my, displayRange=(0,1), previousEnabled=True, nextEnabled=True)
+    #from datatypes import UserList
+    #my=UserList()
+    #lcd.drawPageUserSelect(userList=my, displayRange=(0,1), previousEnabled=True, nextEnabled=True)
