@@ -1,3 +1,7 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
 import asyncio
 import configparser
 import queue

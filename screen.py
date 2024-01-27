@@ -1,4 +1,4 @@
-
+import logging
 from PIL import Image, ImageDraw, ImageFont
 
 import ILI9341 as TFT
