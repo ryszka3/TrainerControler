@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
 
 
 import asyncio
