@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(filename='app.log', filemode='w', level=logging.DEBUG)
+logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 
 import asyncio
@@ -8,7 +8,7 @@ import queue
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
-from   screen      import ScreenManager, TouchScreen
+#from   screen      import ScreenManager, TouchScreen
 
 
 userList               = UserList()
@@ -16,8 +16,8 @@ dataAndFlagContainer   = DataContainer()
 device_heartRateSensor = HeartRateMonitor()
 device_turboTrainer    = FitnessMachine()
 workoutManager         = WorkoutManager()
-lcd                    = ScreenManager()
-touchScreen            = TouchScreen()
+#lcd                    = ScreenManager()
+#touchScreen            = TouchScreen()
 
 #####    Reading configuration file    ####
 
@@ -517,7 +517,7 @@ async def main():
     await asyncio.gather(
         device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
         device_turboTrainer.   connection_to_BLE_Device(lock, dataAndFlagContainer),
-        supervisor.loopy(),
+        supervisor.loop(),
         workoutManager.run(device_turboTrainer, dataAndFlagContainer)
     )
 
@@ -525,4 +525,5 @@ async def main():
 ####    Trigger Main    ####
 if __name__ == "__main__":
     asyncio.run(main())
+    
 
