@@ -8,7 +8,7 @@ import queue
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
-#from   screen      import ScreenManager, TouchScreen
+from   screen      import ScreenManager, TouchScreen
 
 
 userList               = UserList()
@@ -16,8 +16,8 @@ dataAndFlagContainer   = DataContainer()
 device_heartRateSensor = HeartRateMonitor()
 device_turboTrainer    = FitnessMachine()
 workoutManager         = WorkoutManager()
-#lcd                    = ScreenManager()
-#touchScreen            = TouchScreen()
+lcd                    = ScreenManager()
+touchScreen            = TouchScreen()
 
 #####    Reading configuration file    ####
 
@@ -100,6 +100,57 @@ class Supervisor:
                 return True
             
         return False
+
+    async def stringEdit(self, string:str) -> str:
+        print("state: ", "stringEditor method")     
+        
+        self.keyboardUpperCase = False
+        self.keyboardSpecials = False
+        
+        self.originalString = string
+        self.editedString = string
+
+        self.touchActiveRegions = lcd.drawStringEditor(string)
+        
+        def processTouch(value) -> bool:
+            if   value == "Discard":
+                self.editedString = self.originalString
+                return True
+            elif value == "Bcksp":
+                self.editedString=self.editedString[0,-1]
+            elif value == "Del":
+                pass
+            elif value == "Save":
+                return True
+            elif value == "shift":
+                self.keyboardUpperCase = not self.keyboardUpperCase
+            elif value == "specials":
+                self.keyboardSpecials  = not self.keyboardSpecials
+            else:
+                self.editedString = self.editedString + value
+            
+            self.touchActiveRegions = lcd.drawStringEditor(self.editedString, None, None, self.keyboardUpperCase, self.keyboardSpecials)
+            return False
+        
+
+        await asyncio.sleep(1.0)    ## Deadzone for touch
+        await self.touchTester(self.touchActiveRegions, processTouch)
+        return self.editedString
+    
+    
+    async def touchTester(self, touchActiveRegions: tuple, callback):
+        while True: 
+            touch, location = touchScreen.checkTouch()
+            if touch == True:
+                print("Touch! ", location)
+                for region in touchActiveRegions:
+                    boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
+                    if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                        if callback(value) == True: 
+                            return
+                await asyncio.sleep(0.5)    ## Deadzone for touch
+            await asyncio.sleep(self.sleepDuration)
+
 
 
     async def loopy(self):
@@ -212,7 +263,7 @@ class Supervisor:
                     self.oldState = self.state
                     self.state = "MainMenu"
 
-                    
+
             if self.state == "ProgEdit":
 
                 print("state: ", self.state)
@@ -275,6 +326,9 @@ class Supervisor:
                                         ## reset edited seg and pointer
                                         editedSegment = WorkoutSegment()
                                         selectedSegmentID = None
+
+                                    elif value == "Name:":
+                                        editedWorkoutProgram.name = self.stringEdit(editedWorkoutProgram.name)
 
                                     elif value == "Remove":
                                         editedWorkoutProgram.removeSegment(selectedSegmentID)
