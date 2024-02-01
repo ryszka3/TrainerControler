@@ -571,7 +571,7 @@ async def main():
     await asyncio.gather(
         device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
         device_turboTrainer.   connection_to_BLE_Device(lock, dataAndFlagContainer),
-        supervisor.loop(),
+        supervisor.loopy(),
         workoutManager.run(device_turboTrainer, dataAndFlagContainer)
     )
 

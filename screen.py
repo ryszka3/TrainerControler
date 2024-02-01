@@ -133,13 +133,13 @@ class ScreenManager:
         self.COLOUR_TT:         tuple = (38,  188, 196)
         self.COLOUR_CLIMBER:    tuple = (32,  140,  20)
 
-        #self.display = TFT.ILI9341(dc     = PIN_DC, 
-         #                          rst    = PIN_RST, 
-          #                         spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
-           #                        width  = self.WIDTH, 
-            #                       height = self.HEIGHT)
-        #self.display.begin()
-        #self.display.clear(self.COLOUR_BG)    # Clear to background
+        self.display = TFT.ILI9341(dc     = PIN_DC, 
+                                   rst    = PIN_RST, 
+                                   spi    = SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz = BUS_FREQUENCY), 
+                                   width  = self.WIDTH, 
+                                   height = self.HEIGHT)
+        self.display.begin()
+        self.display.clear(self.COLOUR_BG)    # Clear to background
 
         #self.im = Image.new('RGB', (self.WIDTH, self.HEIGHT), self.COLOUR_BG)
 
@@ -399,7 +399,7 @@ class ScreenManager:
             Y_Pos += 13
 
             touchBox_xy = font.getbbox(text=label+str(value)+unit)
-            touchBox_xy = (touchBox_xy[0], touchBox_xy[1], touchBox_xy[2]+Xoffset, touchBox_xy[3])
+            touchBox_xy = (X_Pos+touchBox_xy[0], Y_Pos+touchBox_xy[1], X_Pos+touchBox_xy[2]+Xoffset, ypos+touchBox_xy[3])
 
             touchActiveRegions += ((touchBox_xy, label),)
 
