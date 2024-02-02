@@ -117,7 +117,7 @@ class Supervisor:
                 self.editedString = self.originalString
                 return True
             elif value == "Bcksp":
-                self.editedString=self.editedString[0,-1]
+                self.editedString=self.editedString[0:-1]
             elif value == "Del":
                 pass
             elif value == "Save":
@@ -134,16 +134,16 @@ class Supervisor:
         
 
         await asyncio.sleep(1.0)    ## Deadzone for touch
-        await self.touchTester(self.touchActiveRegions, processTouch)
+        await self.touchTester(processTouch)
         return self.editedString
     
     
-    async def touchTester(self, touchActiveRegions: tuple, callback):
+    async def touchTester(self, callback):
         while True: 
             touch, location = touchScreen.checkTouch()
             if touch == True:
                 print("Touch! ", location)
-                for region in touchActiveRegions:
+                for region in self.touchActiveRegions:
                     boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                     if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                         if callback(value) == True: 
@@ -328,7 +328,8 @@ class Supervisor:
                                         selectedSegmentID = None
 
                                     elif value == "Name:":
-                                        editedWorkoutProgram.name = self.stringEdit(editedWorkoutProgram.name)
+                                        newName = await self.stringEdit(editedWorkoutProgram.name)
+                                        editedWorkoutProgram.name = newName
 
                                     elif value == "Remove":
                                         editedWorkoutProgram.removeSegment(selectedSegmentID)

@@ -203,11 +203,11 @@ class ScreenManager:
         return touchActiveRegions
 
     def drawStringEditor(self, string: str, caretPos:int = None, selection: tuple = None, keyboardUpperCase: bool = None, keyboardSpecials:str=False):
-        #draw = self.display.draw() # Get a PIL Draw object
-        #self.display.clear(self.COLOUR_BG) 
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
         
-        image = Image.new(mode="RGB", size= (self.WIDTH, self.HEIGHT), color=self.COLOUR_BG)
-        draw = ImageDraw.Draw(image)
+        #image = Image.new(mode="RGB", size= (self.WIDTH, self.HEIGHT), color=self.COLOUR_BG)
+        #draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(font=self.font_name, size=12)
         
         
@@ -252,9 +252,10 @@ class ScreenManager:
         draw.text(xy=(editor_box_xy[0]+self.MARGIN_SMALL, editor_box_xy[1]+box_corner_radius+self.MARGIN_SMALL), text=string, font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
 
 
-        #self.display.buffer.paste
-        image.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
-        image.show()
+        self.display.buffer.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
+        #image.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
+        #image.show()
+        self.display.display()
         return touchActiveRegions
 
     
@@ -399,7 +400,7 @@ class ScreenManager:
             Y_Pos += 13
 
             touchBox_xy = font.getbbox(text=label+str(value)+unit)
-            touchBox_xy = (X_Pos+touchBox_xy[0], Y_Pos+touchBox_xy[1], X_Pos+touchBox_xy[2]+Xoffset, ypos+touchBox_xy[3])
+            touchBox_xy = (X_Pos+touchBox_xy[0], Y_Pos+touchBox_xy[1], X_Pos+touchBox_xy[2]+Xoffset, Y_Pos+touchBox_xy[3])
 
             touchActiveRegions += ((touchBox_xy, label),)
 
