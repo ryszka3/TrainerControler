@@ -202,6 +202,132 @@ class ScreenManager:
         self.display.display()
         return touchActiveRegions
 
+    def drawStringEditor(self, string: str, caretPos:int = None, selection: tuple = None, keyboardUpperCase: bool = None, keyboardSpecials:str=False):
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        
+        #image = Image.new(mode="RGB", size= (self.WIDTH, self.HEIGHT), color=self.COLOUR_BG)
+        #draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(font=self.font_name, size=12)
+        
+        
+        touchActiveRegions = tuple()
+        keyboard, keyboardTouchActiveRegions = self.drawKeyboard(keyboardUpperCase, keyboardSpecials)
+
+        keyboard_x = int((self.WIDTH - keyboard.width)/2)
+        keyboard_y = int(self.HEIGHT - keyboard.height)
+        
+        for region, value in keyboardTouchActiveRegions:  #### shift touch region by chart's x,y 
+            x1, y1, x2, y2 = region
+            x1 += keyboard_x
+            x2 += keyboard_x
+            y1 += keyboard_y
+            y2 += keyboard_y
+
+            touchActiveRegions += (((x1, y1, x2, y2), value),)
+
+        #### buttons
+        buttons_labels = ("Bcksp", "Del", "Save", "Discard")
+        button_width = int(max([font.getlength(label) for label in buttons_labels]) + 6)
+        editor_box_xy = (self.MARGIN_SMALL, self.MARGIN_SMALL, self.WIDTH-2*self.MARGIN_SMALL- button_width, keyboard_y-self.MARGIN_SMALL)
+        
+        button_height = 18
+        button_X_pos = self.WIDTH - self.MARGIN_SMALL - button_width
+        y_pos = self.MARGIN_SMALL * 2
+        button_y_spacing = (editor_box_xy[3]-editor_box_xy[1]-2*self.MARGIN_SMALL)/len(buttons_labels)
+
+
+        for label in buttons_labels:
+            button_xy = (button_X_pos, y_pos, button_X_pos+button_width, y_pos+button_height)
+            button_centre_xy = ((button_xy[0]+button_xy[2])/2, (button_xy[1]+button_xy[3])/2)
+            draw.rounded_rectangle(xy=button_xy, radius=4, fill=self.COLOUR_BUTTON)
+            draw.text(xy=button_centre_xy, text=label, anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT )
+            touchActiveRegions +=  ((button_xy, label),)
+            y_pos += button_y_spacing
+        
+        #### edit box
+        box_corner_radius = 12
+        draw.rounded_rectangle(xy=editor_box_xy, radius=box_corner_radius, fill=self.COLOUR_BG_LIGHT)
+        font = ImageFont.truetype(font=self.font_name, size=12)
+        draw.text(xy=(editor_box_xy[0]+self.MARGIN_SMALL, editor_box_xy[1]+box_corner_radius+self.MARGIN_SMALL), text=string, font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+
+
+        self.display.buffer.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
+        #image.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
+        #image.show()
+        self.display.display()
+        return touchActiveRegions
+
+    
+    def drawKeyboard(self, isUpperCase: bool = False, specials: bool = False) -> tuple:
+
+        touchActiveRegions = tuple()
+
+        line_letters_1 = "qwertyyuiop"
+        line_letters_2 = "asdfghjkl"
+        line_letters_3 = "zxcvbnm"
+        line_numbers   = "1234567890"
+        line_special_1 = "!\"£$%^&*()="
+        line_special_2 = "_-+[];:@#"
+        line_special_3 = "'~,<>.?"
+
+        if specials == True:
+            selected_lines = (line_numbers, line_special_1, line_special_2, line_special_3)
+        else:
+            selected_lines= (line_numbers, line_letters_1, line_letters_2, line_letters_3)
+
+        max_number_of_chars = max([len(line) for line in selected_lines])
+        char_spacing = 3  
+        char_width = int((self.WIDTH - (max_number_of_chars+1)*char_spacing)/max_number_of_chars)
+
+        Y_pos = char_spacing  # first line Y
+        lineSpacing = char_spacing
+        char_height = 25
+        
+        image_height = char_height * 4 + 5 * char_spacing
+        image_width  = max_number_of_chars*char_width + (max_number_of_chars + 1) * char_spacing
+
+        image = Image.new(mode="RGB", size= (image_width, image_height), color=self.COLOUR_BG)
+        draw = ImageDraw.Draw(image)
+
+        font = ImageFont.truetype(font=self.font_name, size=14)
+        
+        line_X_pos_starts = (char_spacing + char_width/2, char_spacing, char_spacing + char_width/2, 2*char_spacing + char_width*3/2)
+        
+        for line, X_pos_start in zip(selected_lines, line_X_pos_starts):
+            X_pos = X_pos_start
+            line = line.upper() if isUpperCase == True else line
+            
+            for character in line:
+                
+                box_xy = (X_pos, Y_pos, X_pos+char_width, Y_pos+char_height)
+                box_centre_xy = (int((box_xy[0]+box_xy[2])/2), int((box_xy[1]+box_xy[3])/2))
+
+                draw.rounded_rectangle(xy = box_xy, radius=3, fill=self.COLOUR_BG_LIGHT)
+                draw.text(xy = box_centre_xy, text = character, fill = self.COLOUR_OUTLINE, font = font, anchor="mm")
+                touchActiveRegions += ((box_xy, character),)
+                X_pos += char_width + char_spacing
+
+            Y_pos += char_height + lineSpacing
+
+        font = ImageFont.truetype(font=self.font_name, size=10)
+
+        specials_xy = (X_pos, char_height * 3 + lineSpacing * 4, X_pos + 2*char_width, char_height * 4 + lineSpacing * 4)
+        specials_centre_xy = (int((specials_xy[0]+specials_xy[2])/2), int((specials_xy[1]+specials_xy[3])/2))
+        draw.rounded_rectangle(xy = specials_xy, radius=3, fill=self.COLOUR_BG_LIGHT)
+        draw.text(xy = specials_centre_xy, text = "!#1£", fill = self.COLOUR_OUTLINE, font = font, anchor="mm")
+        touchActiveRegions += ((specials_xy, "specials"),)
+
+        shift_xy = (char_spacing, char_height * 3 + lineSpacing * 4, int(char_spacing+char_width*3/2), char_height * 4 + lineSpacing * 4)
+        shift_centre_xy = (int((shift_xy[0]+shift_xy[2])/2), int((shift_xy[1]+shift_xy[3])/2))
+        draw.rounded_rectangle(xy = shift_xy, radius=3, fill=self.COLOUR_BG_LIGHT)
+        draw.text(xy = shift_centre_xy, text = "Shift", fill = self.COLOUR_OUTLINE, font = font, anchor="mm")
+        touchActiveRegions += ((shift_xy, "shift"),)
+
+        return (image, touchActiveRegions)
+
+
+
     def drawProgramEditor(self, program: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 
         
@@ -272,6 +398,11 @@ class ScreenManager:
             font = ImageFont.truetype(font=self.font_name, size=size)
             draw.text(xy=(X_Pos + Xoffset, Y_Pos), text=str(value)+unit, fill=self.COLOUR_OUTLINE, font=font)
             Y_Pos += 13
+
+            touchBox_xy = font.getbbox(text=label+str(value)+unit)
+            touchBox_xy = (X_Pos+touchBox_xy[0], Y_Pos+touchBox_xy[1], X_Pos+touchBox_xy[2]+Xoffset, Y_Pos+touchBox_xy[3])
+
+            touchActiveRegions += ((touchBox_xy, label),)
 
 
         font = ImageFont.truetype(font=self.font_name, size=10)
@@ -1141,3 +1272,8 @@ class ScreenManager:
 
         return image
 
+if __name__ == "__main__":
+
+    lcd = ScreenManager()
+    #lcd.drawKeyboard(case="upper", specials=True)
+    lcd.drawStringEditor("workout no1")
