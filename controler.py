@@ -64,35 +64,47 @@ def scanUserHistory(userName):
         return None
     
     list_filtered = [it.removesuffix(".csv") for it in files_in_folder if it.find("Workout") >=0 and it.find(".csv") > 0] 
-    
 
     ret = list()
     for item in list_filtered:
         with open(path+"\\"+item+".csv", mode="r") as file:
-            last_two_line = file.readlines()[-2:]
-            file.seek(0)
-            csvObj  = csv.reader(file)
+
+            csvObj = csv.reader(file)
             
             name = None
             program_name = None
+            averages = dict()
+            maxs = dict()
+
+            def parseLine(line: list) -> dict:
+                var = dict()
+                for it, key in enumerate(CSV_headers):
+                    try:
+                        var[key]=line[it]
+                    except:
+                        var[key]=""
+                return var
+
             for line in csvObj:
                 if line[0] == "Created:":
-                    name = line[1]
-                    name = name.replace("-", " ")
-                    name = name + " at " + line[3]
+                    name = line[1].replace("-", " ") + " at " + line[3]
+                    
                 elif line[0] == "Type:":
                     program_name = line[2]
-                if name is not None and program_name is not None:
-                    break
+
+                elif line[0] == "AVERAGE:":
+                    averages = parseLine(line)
+
+                elif line[0] == "MAX:":
+                    maxs = parseLine(line)
+
             
             if name is None:
-                name = "no name"
+                name="no name"
             if program_name is None:
                 program_name = ""
-            
-            csvObj2 = csv.DictReader(last_two_line, CSV_headers, restval="")
-            list_of_stats = [it for it in csvObj2]
-            workoutStats ={"Name":name, "Program": program_name, "Averages":list_of_stats[0], "Max":list_of_stats[1]}
+
+            workoutStats ={"Name":name, "Program": program_name, "Averages":averages, "Max":maxs}
         
             ret.append(workoutStats)
     
