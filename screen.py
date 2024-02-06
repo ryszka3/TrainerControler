@@ -393,16 +393,17 @@ class ScreenManager:
             
             font = ImageFont.truetype(font=self.font_name, size=8)
             draw.text(xy=(X_Pos, Y_Pos), text=label, fill=self.COLOUR_TEXT_LIGHT, font=font)
+            Y_Pos_start = Y_Pos
             Y_Pos += 13
 
             font = ImageFont.truetype(font=self.font_name, size=size)
             draw.text(xy=(X_Pos + Xoffset, Y_Pos), text=str(value)+unit, fill=self.COLOUR_OUTLINE, font=font)
-            Y_Pos += 13
-
-            touchBox_xy = font.getbbox(text=label+str(value)+unit)
-            touchBox_xy = (X_Pos+touchBox_xy[0], Y_Pos+touchBox_xy[1], X_Pos+touchBox_xy[2]+Xoffset, Y_Pos+touchBox_xy[3])
+            
+            text_length = int(max(font.getbbox(text=label), font.getbbox(text=str(value)+unit)))
+            touchBox_xy = (X_Pos, Y_Pos_start, X_Pos+text_length, Y_Pos)
 
             touchActiveRegions += ((touchBox_xy, label),)
+            Y_Pos += 13
 
 
         font = ImageFont.truetype(font=self.font_name, size=10)
