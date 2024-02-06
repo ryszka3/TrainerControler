@@ -253,11 +253,116 @@ class ScreenManager:
 
 
         self.display.buffer.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
-        #image.paste(im = keyboard, box=(int(keyboard_x), int(keyboard_y)))
-        #image.show()
         self.display.display()
         return touchActiveRegions
+    
 
+    def drawPageHistory(self, list_of_workouts: list, lastDisplayedItem: int) -> tuple:
+        
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        touchActiveRegions = tuple()
+        
+        font = ImageFont.truetype(font=self.font_name, size=16)
+        draw.text(xy = (self.WIDTH / 2, self.MARGIN_SMALL), 
+                    text = "Workout History", # Box title
+                    fill = self.COLOUR_TEXT_LIGHT,
+                    font = font,
+                    anchor="mt")
+        
+        font = ImageFont.truetype(font=self.font_name, size=10)
+        button_mainMenu_xy = (self.MARGIN_SMALL, self.MARGIN_SMALL,
+                              self.MARGIN_SMALL + int(font.getlength("Main Menu"))+4, self.MARGIN_SMALL+16)
+        button_centre = ((button_mainMenu_xy[2]+button_mainMenu_xy[0])/2, (button_mainMenu_xy[3]+button_mainMenu_xy[1])/2)
+        draw.rounded_rectangle(xy=button_mainMenu_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_centre, text="Main Menu", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_mainMenu_xy, "MainMenu"),)
+
+        
+        no_boxes = 3
+        Y_Pos = 30
+        box_height = 60
+
+        for i in range(no_boxes):
+            box_xy = (self.MARGIN_SMALL, Y_Pos, self.WIDTH-60, Y_Pos+box_height)
+            draw.rounded_rectangle(xy=box_xy, radius=10, fill=self.COLOUR_BG_LIGHT)
+            touchActiveRegions += ((box_xy, lastDisplayedItem-i),)
+
+            font = ImageFont.truetype(font=self.font_name, size=11)
+            draw.text(xy=(self.MARGIN_SMALL+10, Y_Pos+8), text=list_of_workouts[lastDisplayedItem-i]["Name"], 
+                      font=font, anchor="lt", fill=self.COLOUR_TEXT_LIGHT)
+            font = ImageFont.truetype(font=self.font_name, size=10)
+
+            ##### Duration
+            draw.text(xy=(self.MARGIN_SMALL+10, Y_Pos+27), text="Duration:", font=font, anchor="lt", fill=self.COLOUR_FILL)
+            duration = list_of_workouts[lastDisplayedItem-i]["Max"]["Time"]
+            try:
+                duration = formatTime(int(duration))
+            except:
+                duration = "0"
+            draw.text(xy=(self.MARGIN_SMALL+10+45, Y_Pos+28), 
+                      text=duration, 
+                      font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+            
+            #### Average power
+            draw.text(xy=(self.MARGIN_SMALL+110, Y_Pos+27), text="Avg. Power:", font=font, anchor="lt", fill=self.COLOUR_FILL)
+            average_power = list_of_workouts[lastDisplayedItem-i]["Averages"]["Power"]
+            try:
+                average_power = str(round(float(average_power))) + " W"
+            except:
+                average_power = ""
+            draw.text(xy=(self.MARGIN_SMALL+110+62, Y_Pos+27), 
+                      text=average_power, font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+            
+            #### Energy
+            draw.text(xy=(self.MARGIN_SMALL+10, Y_Pos+43), text="Energy:", font=font, anchor="lt", fill=self.COLOUR_FILL)
+            energy = list_of_workouts[lastDisplayedItem-i]["Max"]["Energy"]
+            try:
+                energy = str(round(float(energy)))
+            except:
+                energy = ""
+            draw.text(xy=(self.MARGIN_SMALL+10+45, Y_Pos+43), 
+                      text=energy+" kJ", font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+
+            #### Program name
+            draw.text(xy=(self.MARGIN_SMALL+110, Y_Pos+43), text="Program:", font=font, anchor="lt", fill=self.COLOUR_FILL)
+            program_name = list_of_workouts[lastDisplayedItem-i]["Program"]
+            program_name = (program_name[:14] + "…") if len(program_name) > 14 else program_name
+            draw.text(xy=(self.MARGIN_SMALL+110+62, Y_Pos+43), text=program_name, font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+
+            Y_Pos += box_height+8
+        
+        
+        displayed_range = str(lastDisplayedItem-1)+" to  "+str(lastDisplayedItem+1)+"\nOut of:  "+str(len(list_of_workouts))
+        draw.text(xy=(self.WIDTH-30, int(self.HEIGHT/2)), text=displayed_range, anchor="mm", align="center", fill=self.COLOUR_FILL)
+
+
+        triangle_width = 12
+        triangle_height = 16
+
+        if lastDisplayedItem+1 < len(list_of_workouts):
+            Y_Pos = 80
+            draw.polygon(xy=(int(self.WIDTH-30), Y_Pos,
+                             int(self.WIDTH-30 - triangle_width/2), Y_Pos+triangle_height,
+                             int(self.WIDTH-30 + triangle_width/2), Y_Pos+triangle_height),
+                         fill=self.COLOUR_BUTTON)
+            
+            triangle_box = (int(self.WIDTH-30 - triangle_width/2), Y_Pos,  int(self.WIDTH-30 + triangle_width/2), Y_Pos+triangle_height)
+            touchActiveRegions += ((triangle_box, "Next"),)
+            
+        if lastDisplayedItem-1 > 0:
+            Y_Pos = 147
+            draw.polygon(xy=(int(self.WIDTH-30 - triangle_width/2), Y_Pos,
+                             int(self.WIDTH-30 + triangle_width/2), Y_Pos,
+                             int(self.WIDTH-30), Y_Pos+triangle_height),
+                         fill=self.COLOUR_BUTTON)
+            
+            triangle_box = (int(self.WIDTH-30 - triangle_width/2), Y_Pos,  int(self.WIDTH-30 + triangle_width/2), Y_Pos+triangle_height)
+            touchActiveRegions += ((triangle_box, "Previous"),)
+
+        self.display.display()
+        return touchActiveRegions
+    
     
     def drawKeyboard(self, isUpperCase: bool = False, specials: bool = False) -> tuple:
 

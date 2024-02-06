@@ -5,7 +5,7 @@ import datetime
 import time
 import csv
 import asyncio
-from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
+from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment, CSV_headers
 from   BLE_Device  import FitnessMachine
 from   TCX         import TCXWriter
 
@@ -189,7 +189,9 @@ class WorkoutManager():
                                                     "at:",
                                                     datetime.datetime.now().strftime("%X")                                                
                                                     )))
-                            csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
+                            csvWriter.writerow(["Type", "Program" if entry.type == "Start" else "Freeride", 
+                                                self.currentWorkout.name if entry.type == "Start" else ""])
+                            csvWriter.writerow(CSV_headers)
                             print("Workout data file (CSV) created")
                         
                         except:

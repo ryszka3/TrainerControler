@@ -2,12 +2,10 @@ import logging
 logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 
-import asyncio
-import configparser
-import queue
+import asyncio, configparser, queue, os, csv
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine
-from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
+from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
 from   screen      import ScreenManager, TouchScreen
 
 
@@ -57,6 +55,51 @@ if "TouchScreen" in config:
     except:
         pass    # no worries, will use the defaults for now
 
+
+def scanUserHistory(userName):
+    path = os.getcwd() + "\\Workouts\\" + userName
+    try:
+        files_in_folder:str = os.listdir(path=path)
+    except:
+        return None
+    
+    list_filtered = [it.removesuffix(".csv") for it in files_in_folder if it.find("Workout") >=0 and it.find(".csv") > 0] 
+    
+
+    ret = list()
+    for item in list_filtered:
+        with open(path+"\\"+item+".csv", mode="r") as file:
+            last_two_line = file.readlines()[-2:]
+            file.seek(0)
+            csvObj  = csv.reader(file)
+            
+            name = None
+            program_name = None
+            for line in csvObj:
+                if line[0] == "Created:":
+                    name = line[1]
+                    name = name.replace("-", " ")
+                    name = name + " at " + line[3]
+                elif line[0] == "Type:":
+                    program_name = line[2]
+                if name is not None and program_name is not None:
+                    break
+            
+            if name is None:
+                name = "no name"
+            if program_name is None:
+                program_name = ""
+            
+            csvObj2 = csv.DictReader(last_two_line, CSV_headers, restval="")
+            list_of_stats = [it for it in csvObj2]
+            workoutStats ={"Name":name, "Program": program_name, "Averages":list_of_stats[0], "Max":list_of_stats[1]}
+        
+            ret.append(workoutStats)
+    
+    return ret
+
+
+
 #####    Main Program functions here    ####
 
 class Supervisor:
@@ -90,6 +133,7 @@ class Supervisor:
         dataAndFlagContainer.programRunningFlag = False
         print("Supervisor Closed")
 
+
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
         
         x_touch, y_touch = touchPoint
@@ -100,6 +144,38 @@ class Supervisor:
                 return True
             
         return False
+    
+
+    
+    async def stateHistory(self) -> None:
+        print("state: ", "history method")
+
+        workout_history_list = scanUserHistory(dataAndFlagContainer.activeUser)
+        last_item = len(workout_history_list)-1
+
+        self.touchActiveRegions = lcd.drawPageHistory(workout_history_list, last_item)
+
+        def processTouch(value) -> bool:
+
+            if value == "MainMenu":
+                self.state = "MainMenu"
+                self.oldState = "History"
+                return True
+            elif value == "Next":
+                last_item = min(len(workout_history_list)-1, last_item+1)
+            elif value == "Previous": 
+                last_item = max(0, last_item-1)
+            elif value == "Export":
+                pass
+            else:   ## go to detailed view state
+                pass
+            
+            self.touchActiveRegions = lcd.drawPageHistory(workout_history_list, last_item)
+            return False
+        
+        await self.touchTester(processTouch)    ## touch tester returns when callback returns true
+
+
 
     async def stringEdit(self, string:str) -> str:
         print("state: ", "stringEditor method")     
@@ -133,12 +209,12 @@ class Supervisor:
             return False
         
 
-        await asyncio.sleep(1.0)    ## Deadzone for touch
         await self.touchTester(processTouch)
         return self.editedString
     
     
     async def touchTester(self, callback):
+        await asyncio.sleep(1.0)    ## Deadzone for touch
         while True: 
             touch, location = touchScreen.checkTouch()
             if touch == True:
@@ -512,10 +588,7 @@ class Supervisor:
                 self.state = "MainMenu"
 
             if self.state == "History":
-                print("state: ", self.state)
-
-                self.oldState = self.state
-                self.state = "MainMenu"
+                await self.stateHistory()
 
             if self.state == "UserChange":
                 print("state: ", self.state)

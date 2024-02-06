@@ -5,7 +5,7 @@ import datetime
 from collections import namedtuple
 
 
-
+CSV_headers = ["T","Cadence","Power","HR BPM","HR Zone","Gradient","Speed","Distance","Energy", "Time"]
 WorkoutParameters = namedtuple("WorkoutParameters", ["name", "totalDuration", "avgPower", "maxPower", "totalWork", "avgLevel", "segmentsChartData", "minPower"])
 
 class TCXLap:
@@ -266,5 +266,10 @@ class DataContainer:
         ret.append("MAX:")
         for val in self.max.getIterableRecord():
             ret.append(val)
+
+        ret.append(self.distance)
+        ret.append(self.totalEnergy)
+        ret.append(self.workoutTime)
+            
         return ret
                          
