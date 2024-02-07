@@ -244,14 +244,25 @@ class Supervisor:
         while workoutManager.state != "END":
             await self.touchTester(processTouch, 0.25)
             lcd.drawPageWorkout("Program", workoutManager.state)
-
+            await asyncio.sleep(self.sleepDuration)
+        SAVE_DELAY = 15
         t0 = time.time()    
         elapsedTime = 0
-        while elapsedTime < 5:
-            option_save = "Save (" + str(round(5-elapsedTime)) + ")"
+
+        while True:
+            option_save = "Save (" + str(round(SAVE_DELAY - elapsedTime)) + ")"
             self.touchActiveRegions = lcd.drawMessageBox("Workout finished!", (option_save, "Save + Upload", "Discard"))
-            await self.touchTester(processTouchMessageBox, timeout=1)
+            optionTouched = await self.touchTester(processTouchMessageBox, timeout=1)
+            if optionTouched == True:
+                break
+
+            await asyncio.sleep(self.sleepDuration)
             elapsedTime = time.time() - t0
+            if elapsedTime > SAVE_DELAY:        #### Message box timed out, using default option SAVE
+                await processTouchMessageBox("Save")
+                break
+
+            
         
         print("Execution loop has finished!")
         self.selected_program = None
@@ -340,9 +351,9 @@ class Supervisor:
         await self.touchTester(processTouch)
 
     
-    async def touchTester(self, callback, timeout:float=None):
+    async def touchTester(self, callback, timeout:float=None) -> bool:
         t1 = time.time()
-        while True if timeout is None else time.time()-t1 > timeout: 
+        while True if timeout is None else time.time()-t1 < timeout: 
             touch, location = touchScreen.checkTouch()
             if touch == True:
                 print("Touch! ", location)
@@ -350,9 +361,10 @@ class Supervisor:
                     boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
                     if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
                         if await callback(value) == True: 
-                            return
+                            return True
                 await asyncio.sleep(0.5)    ## Deadzone for touch
             await asyncio.sleep(self.sleepDuration)
+        return False
 
 
 

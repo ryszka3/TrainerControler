@@ -300,6 +300,7 @@ class WorkoutManager():
                 TurboTrainer.reset()
 
                 self.state = "END"
+                await asyncio.sleep(0.01)
 
             if self.state == "END":
                 if not entry == None: 
@@ -325,6 +326,7 @@ class WorkoutManager():
                     if entry.type in ("SAVE", "DISCARD"):   ## Common to both save and discard
                         self.TCX_Object = None
                         self.state = "IDLE"
+                await asyncio.sleep(0.05)
 
         else:
             print("Workout manager closed")
