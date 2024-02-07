@@ -295,8 +295,8 @@ class ScreenManager:
 
             ##### Duration
             draw.text(xy=(self.MARGIN_SMALL+10, Y_Pos+27), text="Duration:", font=font, anchor="lt", fill=self.COLOUR_FILL)
-            duration = list_of_workouts[lastDisplayedItem-i]["Max"]["Time"]
             try:
+                duration = list_of_workouts[lastDisplayedItem-i]["Max"]["Time"]
                 duration = formatTime(int(duration))
             except:
                 duration = "0"
@@ -306,8 +306,8 @@ class ScreenManager:
             
             #### Average power
             draw.text(xy=(self.MARGIN_SMALL+110, Y_Pos+27), text="Avg. Power:", font=font, anchor="lt", fill=self.COLOUR_FILL)
-            average_power = list_of_workouts[lastDisplayedItem-i]["Averages"]["Power"]
             try:
+                average_power = list_of_workouts[lastDisplayedItem-i]["Averages"]["Power"]
                 average_power = str(round(float(average_power))) + " W"
             except:
                 average_power = ""
@@ -316,11 +316,12 @@ class ScreenManager:
             
             #### Energy
             draw.text(xy=(self.MARGIN_SMALL+10, Y_Pos+43), text="Energy:", font=font, anchor="lt", fill=self.COLOUR_FILL)
-            energy = list_of_workouts[lastDisplayedItem-i]["Max"]["Energy"]
             try:
+                energy = list_of_workouts[lastDisplayedItem-i]["Max"]["Energy"]
                 energy = str(round(float(energy)))
             except:
                 energy = ""
+
             draw.text(xy=(self.MARGIN_SMALL+10+45, Y_Pos+43), 
                       text=energy+" kJ", font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
 
@@ -334,7 +335,8 @@ class ScreenManager:
         
         
         displayed_range = str(lastDisplayedItem-1)+" to  "+str(lastDisplayedItem+1)+"\nOut of:  "+str(len(list_of_workouts))
-        draw.text(xy=(self.WIDTH-30, int(self.HEIGHT/2)), text=displayed_range, anchor="mm", align="center", fill=self.COLOUR_FILL)
+        draw.text(xy=(self.WIDTH-30, int(self.HEIGHT/2)), text=displayed_range, anchor="mm", 
+                  align="center", fill=self.COLOUR_FILL, font=font)
 
 
         triangle_width = 12

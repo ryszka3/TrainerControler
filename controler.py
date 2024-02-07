@@ -57,7 +57,7 @@ if "TouchScreen" in config:
 
 
 def scanUserHistory(userName):
-    path = os.getcwd() + "\\Workouts\\" + userName
+    path = os.getcwd() + "/Workouts/" + userName
     try:
         files_in_folder:str = os.listdir(path=path)
     except:
@@ -67,7 +67,7 @@ def scanUserHistory(userName):
 
     ret = list()
     for item in list_filtered:
-        with open(path+"\\"+item+".csv", mode="r") as file:
+        with open(path+"/"+item+".csv", mode="r") as file:
 
             csvObj = csv.reader(file)
             
@@ -162,10 +162,10 @@ class Supervisor:
     async def stateHistory(self) -> None:
         print("state: ", "history method")
 
-        workout_history_list = scanUserHistory(dataAndFlagContainer.activeUser)
-        last_item = len(workout_history_list)-1
+        self.workout_history_list = scanUserHistory(dataAndFlagContainer.activeUser.Name)
+        self.last_item = len(self.workout_history_list)-1
 
-        self.touchActiveRegions = lcd.drawPageHistory(workout_history_list, last_item)
+        self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
 
         def processTouch(value) -> bool:
 
@@ -174,15 +174,15 @@ class Supervisor:
                 self.oldState = "History"
                 return True
             elif value == "Next":
-                last_item = min(len(workout_history_list)-1, last_item+1)
+                self.last_item = min(len(self.workout_history_list)-1, self.last_item+1)
             elif value == "Previous": 
-                last_item = max(0, last_item-1)
+                self.last_item = max(0, self.last_item-1)
             elif value == "Export":
                 pass
             else:   ## go to detailed view state
                 pass
             
-            self.touchActiveRegions = lcd.drawPageHistory(workout_history_list, last_item)
+            self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
             return False
         
         await self.touchTester(processTouch)    ## touch tester returns when callback returns true
