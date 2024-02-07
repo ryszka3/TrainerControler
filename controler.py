@@ -203,39 +203,60 @@ class Supervisor:
         while workoutManager.state == "IDLE":       #### wait for the workout manager to start the program
             await asyncio.sleep(self.sleepDuration)
 
-        def processTouch(value) -> bool:
+        async def processTouch(value) -> bool:
             if value == "End":              ## do end of program routines      
-                workoutManager.queue.put(QueueEntry("End", 0))
+                workoutManager.queue.put(QueueEntry("STOP", 0))
                 device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
-                self.state = "MainMenu"
                 return True
 
             elif workoutManager.state in ("PROGRAM", "FREERIDE"):
-                workoutManager.queue.put(QueueEntry("Pause", 0))
+                workoutManager.queue.put(QueueEntry("PAUSE", 0))
 
             else:
-                workoutManager.queue.put(QueueEntry("Start", 0))
+                workoutManager.queue.put(QueueEntry("START", 0))
             
             return False
 
-
-        print("Program execution loop, workout manager state: ", workoutManager.state)
-
-        self.touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
-        while workoutManager.state != "IDLE":
-            await self.touchTester(processTouch, 0.25)
-            lcd.drawPageWorkout("Program", workoutManager.state)
+        async def processTouchMessageBox(value: str) -> bool:
+            if value == "Discard":
+                workoutManager.queue.put(QueueEntry("DISCARD", 0))
+                return True
             
-        print("Execution loop has finished!")
-        userList.updateUserRecord(userID = self.activeUserID,
+            elif value.startswith("Save"):
+                workoutManager.queue.put(QueueEntry("SAVE", 0))
+
+                userList.updateUserRecord(userID = self.activeUserID,
                                   noWorkouts = dataAndFlagContainer.activeUser.noWorkouts + 1,
                                   distance = dataAndFlagContainer.distance,
                                   energy = dataAndFlagContainer.totalEnergy)
                 
+                if value == "Save + Upload" :
+                    #### Code to upload will go here
+                    pass
+
+                return True
+            
+            return False
+
+        print("Program execution loop, workout manager state: ", workoutManager.state)
+
+        self.touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+        while workoutManager.state != "END":
+            await self.touchTester(processTouch, 0.25)
+            lcd.drawPageWorkout("Program", workoutManager.state)
+
+        t0 = time.time()    
+        elapsedTime = 0
+        while elapsedTime < 5:
+            option_save = "Save (" + str(round(5-elapsedTime)) + ")"
+            self.touchActiveRegions = lcd.drawMessageBox("Workout finished!", (option_save, "Save + Upload", "Discard"))
+            await self.touchTester(processTouchMessageBox, timeout=1)
+            elapsedTime = time.time() - t0
+        
+        print("Execution loop has finished!")
         self.selected_program = None
         self.state = "MainMenu"
         
-
 
     async def stateProgramEditor(self):
         print("state: Program Editor method")
