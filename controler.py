@@ -273,35 +273,36 @@ class Supervisor:
         print("state: Program Editor method")
 
         if self.selected_program is not None:
-            self.editedWorkoutProgram = workoutManager.workouts.getWorkout(self.selected_program)
+            self.edited_workout_program = workoutManager.workouts.getWorkout(self.selected_program)
         else:
-            self.editedWorkoutProgram, self.selected_program = workoutManager.workouts.newWorkout()
+            self.edited_workout_program, self.selected_program = workoutManager.workouts.newWorkout()
                 
-        self.editedSegment = WorkoutSegment()
-        self.touchActiveRegions = lcd.drawProgramEditor(self.editedWorkoutProgram, None, self.editedSegment)
+        self.edited_segment = WorkoutSegment()
+        self.selected_segment_ID = None
+        self.touchActiveRegions = lcd.drawProgramEditor(self.edited_workout_program, self.selected_segment_ID, self.edited_segment)
         
         async def processTouch(value) -> bool:
 
             if value in ("Power", "Level"):
-                self.editedSegment.segmentType = value
+                self.edited_segment.segmentType = value
 
             elif value in ("- 50", "- 5", "+ 5", "+ 50"):
-                self.editedSegment.setting += int(str(value).replace(" ", ""))
+                self.edited_segment.setting += int(str(value).replace(" ", ""))
                         #self.editedSegment.setting = min, max
 
             elif value in ("-10m", "-1m", "+1m", "+10m"):
-                self.editedSegment.duration += int(str(value).replace("m","")) * 60
+                self.edited_segment.duration += int(str(value).replace("m","")) * 60
 
             elif value in ("-10s", "+10s"):
-                self.editedSegment.duration += int(str(value).replace("s","")) * 1
+                self.edited_segment.duration += int(str(value).replace("s","")) * 1
 
             elif value in range(0, 999):    ## clicked on a segments chart
                 print("Segment selection: ", value)
-                selectedSegmentID = value
-                self.editedSegment = self.editedWorkoutProgram.segments[selectedSegmentID].copy()  ## load segment to editor
+                self.selected_segment_ID = value
+                self.edited_segment = self.edited_workout_program.segments[self.selected_segment_ID].copy()  ## load segment to editor
                     
             elif value == "Insert":
-                self.editedWorkoutProgram.insertSegment(selectedSegmentID, self.editedSegment)
+                self.edited_workout_program.insertSegment(self.selected_segment_ID, self.edited_segment)
 
             elif value == "Finish":
                 self.touchActiveRegions = lcd.drawMessageBox("Finish editing?", ["Save", "Discard", "Cancel"])
@@ -328,24 +329,24 @@ class Supervisor:
                     return True
             
             elif value == "Name:":
-                newName = await self.stringEdit(self.editedWorkoutProgram.name)
-                self.editedWorkoutProgram.name = newName
+                newName = await self.stringEdit(self.edited_workout_program.name)
+                self.edited_workout_program.name = newName
             
             elif value == "Add":
-                self.editedWorkoutProgram.appendSegment(self.editedSegment)
+                self.edited_workout_program.appendSegment(self.edited_segment)
 
             elif value == "Update":
-                self.editedWorkoutProgram.updateSegment(selectedSegmentID, self.editedSegment)
+                self.edited_workout_program.updateSegment(self.selected_segment_ID, self.edited_segment)
 
             elif value == "Remove":
-                self.editedWorkoutProgram.removeSegment(selectedSegmentID)
+                self.edited_workout_program.removeSegment(self.selected_segment_ID)
 
             if value in ("Add", "Update", "Remove"):    # reset edited seg and pointer
                 
-                self.editedSegment = WorkoutSegment()
-                selectedSegmentID = None
+                self.edited_segment = WorkoutSegment()
+                self.selected_segment_ID = None
             
-            self.touchActiveRegions = lcd.drawProgramEditor(self.editedWorkoutProgram, selectedSegmentID, self.editedSegment)
+            self.touchActiveRegions = lcd.drawProgramEditor(self.edited_workout_program, self.selected_segment_ID, self.edited_segment)
             return False
 
         await self.touchTester(processTouch)
