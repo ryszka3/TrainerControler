@@ -2,13 +2,11 @@ import logging
 logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 
-import asyncio
-import configparser
-import queue
+import asyncio, configparser, queue, os, csv
 import time
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
-from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
+from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
 from   screen      import ScreenManager, TouchScreen
 
 
@@ -58,6 +56,63 @@ if "TouchScreen" in config:
     except:
         pass    # no worries, will use the defaults for now
 
+
+def scanUserHistory(userName):
+    path = os.getcwd() + "/Workouts/" + userName
+    try:
+        files_in_folder:str = os.listdir(path=path)
+    except:
+        return None
+    
+    list_filtered = [it.removesuffix(".csv") for it in files_in_folder if it.find("Workout") >=0 and it.find(".csv") > 0] 
+
+    ret = list()
+    for item in list_filtered:
+        with open(path+"/"+item+".csv", mode="r") as file:
+
+            csvObj = csv.reader(file)
+            
+            name = None
+            program_name = None
+            averages = dict()
+            maxs = dict()
+
+            def parseLine(line: list) -> dict:
+                var = dict()
+                for it, key in enumerate(CSV_headers):
+                    try:
+                        var[key]=line[it]
+                    except:
+                        var[key]=""
+                return var
+
+            for line in csvObj:
+                if line[0] == "Created:":
+                    name = line[1].replace("-", " ") + " at " + line[3]
+                    
+                elif line[0] == "Type:":
+                    program_name = line[2]
+
+                elif line[0] == "AVERAGE:":
+                    averages = parseLine(line)
+
+                elif line[0] == "MAX:":
+                    maxs = parseLine(line)
+
+            
+            if name is None:
+                name="no name"
+            if program_name is None:
+                program_name = ""
+
+            workoutStats ={"Name":name, "Program": program_name, "Averages":averages, "Max":maxs}
+        
+            ret.append(workoutStats)
+    
+    return ret
+
+
+
 #####    Main Program functions here    ####
 
 class Supervisor:
@@ -89,6 +144,7 @@ class Supervisor:
         
         dataAndFlagContainer.programRunningFlag = False
         print("Supervisor Closed")
+
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
         
@@ -181,7 +237,6 @@ class Supervisor:
             return False
         
 
-        await asyncio.sleep(1.0)    ## Deadzone for touch
         await self.touchTester(processTouch)
         return self.editedString   
 
@@ -537,8 +592,7 @@ class Supervisor:
                 self.state = "MainMenu"
 
             if self.state == "History":
-                print("state: ", self.state)
-                self.state = "MainMenu"
+                await self.stateHistory()
 
             if self.state == "UserChange":
                 await self.state_user_change()
