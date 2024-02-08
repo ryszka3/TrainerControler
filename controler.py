@@ -7,7 +7,7 @@ import configparser
 import queue
 import time
 from   workouts    import WorkoutManager
-from   BLE_Device  import HeartRateMonitor, FitnessMachine
+from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment
 from   screen      import ScreenManager, TouchScreen
 
@@ -64,7 +64,6 @@ class Supervisor:
     def __init__(self) -> None:
         self.queue = queue.SimpleQueue()
         self.state: str = "UserChange"
-        self.oldState: str = "UserChange"
         self.activeUserID = 0
         self.sleepDuration = 0.02
 
@@ -101,43 +100,6 @@ class Supervisor:
                 return True
             
         return False
-
-    async def stringEdit(self, string:str) -> str:
-        print("state: stringEditor method")     
-        
-        self.keyboardUpperCase = False
-        self.keyboardSpecials = False
-        
-        self.originalString = string
-        self.editedString = string
-
-        self.touchActiveRegions = lcd.drawStringEditor(string)
-        
-        async def processTouch(value) -> bool:
-            if   value == "Discard":
-                self.editedString = self.originalString
-                return True
-            elif value == "Bcksp":
-                self.editedString=self.editedString[0:-1]
-            elif value == "Del":
-                pass
-            elif value == "Save":
-                return True
-            elif value == "shift":
-                self.keyboardUpperCase = not self.keyboardUpperCase
-            elif value == "specials":
-                self.keyboardSpecials  = not self.keyboardSpecials
-            else:
-                self.editedString = self.editedString + value
-            
-            self.touchActiveRegions = lcd.drawStringEditor(self.editedString, None, None, self.keyboardUpperCase, self.keyboardSpecials)
-            return False
-        
-
-        await asyncio.sleep(1.0)    ## Deadzone for touch
-        await self.touchTester(processTouch)
-        return self.editedString
-    
 
     async def programSelector(self) -> int:
         print("state: Program Selector method")
@@ -187,89 +149,126 @@ class Supervisor:
         
         await self.touchTester(processTouch)
 
-
-
-    async def stateRideProgram(self) -> None:
-        print("State: RideProgram method")
-        print("Loop: will be starting program no: ", self.selected_program)
+    async def stringEdit(self, string:str) -> str:
+        print("state: stringEditor method")     
         
-        if device_heartRateSensor.connectionState == True:
-            device_heartRateSensor.subscribeToService()
-        if device_turboTrainer.connectionState == True:
-            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-                
-        workoutManager.startWorkout(self.selected_program)
-                
-        while workoutManager.state == "IDLE":       #### wait for the workout manager to start the program
-            await asyncio.sleep(self.sleepDuration)
+        self.keyboardUpperCase = False
+        self.keyboardSpecials = False
+        
+        self.originalString = string
+        self.editedString = string
 
+        self.touchActiveRegions = lcd.drawStringEditor(string)
+        
         async def processTouch(value) -> bool:
-            if value == "End":              ## do end of program routines      
-                workoutManager.queue.put(QueueEntry("STOP", 0))
-                device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
+            if   value == "Discard":
+                self.editedString = self.originalString
                 return True
-
-            elif workoutManager.state in ("PROGRAM", "FREERIDE"):
-                workoutManager.queue.put(QueueEntry("PAUSE", 0))
-
+            elif value == "Bcksp":
+                self.editedString=self.editedString[0:-1]
+            elif value == "Del":
+                pass
+            elif value == "Save":
+                return True
+            elif value == "shift":
+                self.keyboardUpperCase = not self.keyboardUpperCase
+            elif value == "specials":
+                self.keyboardSpecials  = not self.keyboardSpecials
             else:
-                workoutManager.queue.put(QueueEntry("START", 0))
+                self.editedString = self.editedString + value
             
+            self.touchActiveRegions = lcd.drawStringEditor(self.editedString, None, None, self.keyboardUpperCase, self.keyboardSpecials)
             return False
+        
 
-        async def processTouchMessageBox(value: str) -> bool:
-            if value == "Discard":
-                workoutManager.queue.put(QueueEntry("DISCARD", 0))
-                return True
-            
-            elif value.startswith("Save"):
-                workoutManager.queue.put(QueueEntry("SAVE", 0))
+        await asyncio.sleep(1.0)    ## Deadzone for touch
+        await self.touchTester(processTouch)
+        return self.editedString   
 
-                userList.updateUserRecord(userID = self.activeUserID,
-                                  noWorkouts = dataAndFlagContainer.activeUser.noWorkouts + 1,
-                                  distance = dataAndFlagContainer.distance,
-                                  energy = dataAndFlagContainer.totalEnergy)
+    async def state_calibrate(self):
+        print("state: state Calibrate method")
+        
+        point1 = (20,20)
+        point2 = (300,220)
+        
+        measuredP1 = None
+        measuredP2 = None
+        
+        lcd.drawPageCalibration(point1)
                 
-                if value == "Save + Upload" :
-                    #### Code to upload will go here
-                    pass
+        while self.state == "Calibrate":
+            touch, location = touchScreen.checkTouch()
+            if touch == True:
+                print("Touch! ", location)
+                if measuredP1 is None: # first point 
+                    measuredP1 = location
+                    lcd.drawPageCalibration(point2)
+                    await asyncio.sleep(1.0)
 
+                else:
+                    measuredP2 = location
+                    # both points acquired,  now do the calculation:
+                    calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
+                                                                            measuredPoints= (measuredP1, measuredP2))
+                            
+                    config.set("TouchScreen", "x_multiplier", str(calibration[0]))
+                    config.set("TouchScreen", "x_offset",     str(calibration[1]))
+                    config.set("TouchScreen", "y_multiplier", str(calibration[2]))
+                    config.set("TouchScreen", "y_offset",     str(calibration[3]))
+                            
+                    with open('config.ini', 'wt') as file:
+                        config.write(file)
+
+                    lcd.drawMessageBox("Calibration applied!", ("OK",))
+                    self.state = "MainMenu"
+                    await asyncio.sleep(3)
+
+            await asyncio.sleep(self.sleepDuration)
+    
+    async def state_main_menu(self):
+        
+        print("state: main menu method")
+        self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+        timer_heart = time.time()
+        timer_trainer = time.time()
+        heart_fill_colour = lcd.COLOUR_BG_LIGHT
+        trainer_fill_colour = lcd.COLOUR_BG_LIGHT
+        
+        while self.state == "MainMenu":
+
+            def apply_device_fill_colour(device: BLE_Device, fill: tuple, timer, variable:tuple):
+                
+                if device.connectionState == False:
+                    device.connect = True           ## Maintain this flag true to continue to try to connect  
+                    
+                    if device.hasLock == False:
+                        variable = lcd.COLOUR_BG_LIGHT
+                    elif time.time() - timer > 0.2:
+                        variable = lcd.COLOUR_BG_LIGHT if variable == fill else fill
+                        timer = time.time()
+                else:
+                    variable = fill
+
+            apply_device_fill_colour(device_heartRateSensor, lcd.COLOUR_HEART, timer_heart, heart_fill_colour)
+            apply_device_fill_colour(device_turboTrainer, lcd.COLOUR_TT, timer_trainer, trainer_fill_colour)
+
+            async def processTouch(value: str) -> bool:
+                self.state = value
                 return True
             
-            return False
-
-        print("Program execution loop, workout manager state: ", workoutManager.state)
-
-        self.touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
-        while workoutManager.state != "END":
-            await self.touchTester(processTouch, 0.25)
-            lcd.drawPageWorkout("Program", workoutManager.state)
-            await asyncio.sleep(self.sleepDuration)
-        SAVE_DELAY = 15
-        t0 = time.time()    
-        elapsedTime = 0
-
-        while True:
-            option_save = "Save (" + str(round(SAVE_DELAY - elapsedTime)) + ")"
-            self.touchActiveRegions = lcd.drawMessageBox("Workout finished!", (option_save, "Save + Upload", "Discard"))
-            optionTouched = await self.touchTester(processTouchMessageBox, timeout=1)
-            if optionTouched == True:
-                break
+            await self.touchTester(processTouch, timeout=0.25)
+    
+            if self.state in ("RideProgram", "Freeride") and device_turboTrainer.connectionState == False:
+                #### no TT connection, display error message, cancel state change
+                lcd.drawConnectionErrorMessage()
+                self.state = "MainMenu"
+                await asyncio.sleep(4.0)
+                        
+            lcd.drawPageMainMenu(heart_fill_colour, trainer_fill_colour)
 
             await asyncio.sleep(self.sleepDuration)
-            elapsedTime = time.time() - t0
-            if elapsedTime > SAVE_DELAY:        #### Message box timed out, using default option SAVE
-                await processTouchMessageBox("Save")
-                break
-
-            
-        
-        print("Execution loop has finished!")
-        self.selected_program = None
-        self.state = "MainMenu"
-        
-
-    async def stateProgramEditor(self):
+    
+    async def state_program_editor(self):
         print("state: Program Editor method")
 
         if self.selected_program is not None:
@@ -351,7 +350,130 @@ class Supervisor:
 
         await self.touchTester(processTouch)
 
+    async def state_ride_program(self) -> None:
+        print("State: RideProgram method")
+        print("Loop: will be starting program no: ", self.selected_program)
+        
+        if device_heartRateSensor.connectionState == True:
+            device_heartRateSensor.subscribeToService()
+        if device_turboTrainer.connectionState == True:
+            device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
+                
+        workoutManager.startWorkout(self.selected_program)
+                
+        while workoutManager.state == "IDLE":       #### wait for the workout manager to start the program
+            await asyncio.sleep(self.sleepDuration)
+
+        async def processTouch(value) -> bool:
+            if value == "End":              ## do end of program routines      
+                workoutManager.queue.put(QueueEntry("STOP", 0))
+                device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
+                return True
+
+            elif workoutManager.state in ("PROGRAM", "FREERIDE"):
+                workoutManager.queue.put(QueueEntry("PAUSE", 0))
+
+            else:
+                workoutManager.queue.put(QueueEntry("START", 0))
+            
+            return False
+
+        async def processTouchMessageBox(value: str) -> bool:
+            if value == "Discard":
+                workoutManager.queue.put(QueueEntry("DISCARD", 0))
+                return True
+            
+            elif value.startswith("Save"):
+                workoutManager.queue.put(QueueEntry("SAVE", 0))
+
+                userList.updateUserRecord(userID = self.activeUserID,
+                                  noWorkouts = dataAndFlagContainer.activeUser.noWorkouts + 1,
+                                  distance = dataAndFlagContainer.distance,
+                                  energy = dataAndFlagContainer.totalEnergy)
+                
+                if value == "Save + Upload" :
+                    #### Code to upload will go here
+                    pass
+
+                return True
+            
+            return False
+
+        print("Program execution loop, workout manager state: ", workoutManager.state)
+
+        self.touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
+        while workoutManager.state != "END":
+            await self.touchTester(processTouch, 0.25)
+            lcd.drawPageWorkout("Program", workoutManager.state)
+            await asyncio.sleep(self.sleepDuration)
+        SAVE_DELAY = 15
+        t0 = time.time()    
+        elapsedTime = 0
+
+        while True:
+            option_save = "Save (" + str(round(SAVE_DELAY - elapsedTime)) + ")"
+            self.touchActiveRegions = lcd.drawMessageBox("Workout finished!", (option_save, "Save + Upload", "Discard"))
+            optionTouched = await self.touchTester(processTouchMessageBox, timeout=1)
+            if optionTouched == True:
+                break
+
+            await asyncio.sleep(self.sleepDuration)
+            elapsedTime = time.time() - t0
+            if elapsedTime > SAVE_DELAY:        #### Message box timed out, using default option SAVE
+                await processTouchMessageBox("Save")
+                break
+
+            
+        
+        print("Execution loop has finished!")
+        self.selected_program = None
+        self.state = "MainMenu" 
+
+    async def state_settings(self):
+        print("state: Setting method")
+        self.touchActiveRegions = lcd.drawPageSettings()
+        
+        async def processTouch(value: str) -> bool:
+            self.state = value
+            return True
+
+        await self.touchTester(processTouch)
     
+    async def state_user_change(self):
+        print("state: user change method")
+
+        numberOfUsers = len(userList.listOfUsers)   
+        self.displayedUsers = (0, min(2, numberOfUsers)-1)
+
+        showPrevPageButton = False
+        showNextPageButton = True if numberOfUsers > 2 else False
+
+        self.touchActiveRegions = lcd.drawPageUserSelect(userList, self.displayedUsers, showPrevPageButton, showNextPageButton)
+        
+        async def processTouch(value: str) -> bool:
+            
+            numberOfUsers = len(userList.listOfUsers)
+            
+            if value == "PreviousPage":
+                self.displayedUsers = (self.displayedUsers(0)-2, self.displayedUsers(0)-1)
+
+            elif value == "NextPage":
+                self.displayedUsers = (self.displayedUsers(1) + 1, min(self.displayedUsers(1)+2, numberOfUsers-1))
+                    
+            else:
+                self.activeUserID = value
+                dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+                self.state = "MainMenu"
+                return True
+            
+            showNextPageButton = True if numberOfUsers > self.displayedUsers[1] else False
+            showPrevPageButton = True if self.displayedUsers[0] > 0 else False
+            self.touchActiveRegions = lcd.drawPageUserSelect(userList, self.displayedUsers, showPrevPageButton, showNextPageButton)
+            
+            return False
+
+        await self.touchTester(processTouch)
+                        
     async def touchTester(self, callback, timeout:float=None) -> bool:
         t1 = time.time()
         while True if timeout is None else time.time()-t1 < timeout: 
@@ -375,176 +497,40 @@ class Supervisor:
         
         while True:     #### Main loop
             if self.state == "MainMenu":
-                print("state: ", self.state)
-                touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
-                loopCounter: int = 0
-                MAX_COUNT = 5
-                await asyncio.sleep(1.0)    ## Deadzone for touch
-                while self.state == "MainMenu":
-                    
-                    heartFillColour = lcd.COLOUR_HEART
-                    if device_heartRateSensor.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
-                        heartFillColour = lcd.COLOUR_BG_LIGHT
-                        device_heartRateSensor.connect = True  ## Maintain this flag true to continue to try to connect   
-
-                    TTFillColour = lcd.COLOUR_TT
-                    if device_turboTrainer.connectionState == False and loopCounter < MAX_COUNT / 2 - 1:
-                        TTFillColour = lcd.COLOUR_BG_LIGHT
-                        device_turboTrainer.connect = True  ## Maintain this flag true to continue to try to connect  
-
-                    #ClimberFillColour = lcd.COLOUR_CLIMBER
-                    #if device_climber.connectionState == False and loopCounter > MAX_COUNT / 2 - 1:
-                    #    ClimberFillColour = lcd.COLOUR_BG_LIGHT
-                    #    device_climber.connect = True  ## Maintain this flag true to continue to try to connect  
-
-                    touch, location = touchScreen.checkTouch()
-                    if touch == True:
-                        print("Touch! ", location)
-                        for region in touchActiveRegions:
-                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-                                self.oldState = self.state
-                                self.state = value
-                    
-                    if self.state in ("RideProgram", "Freeride") and device_turboTrainer.connectionState == False:
-                        #### no TT connection, display error message, cancel state change
-                        lcd.drawConnectionErrorMessage()
-                        self.state = "MainMenu"
-                        await asyncio.sleep(4.0)
-                        
-                    
-                    lcd.drawPageMainMenu(heartFillColour, TTFillColour)
-                    
-                    loopCounter = (loopCounter + 1) % MAX_COUNT
-                    await asyncio.sleep(self.sleepDuration)
+                await self.state_main_menu()
 
             if self.state == "RideProgram":
                 await self.programSelector()
-                await self.stateRideProgram()
+                await self.state_ride_program()
 
             if self.state == "ProgEdit":
                 await self.programSelector()
-                await self.stateProgramEditor()
+                await self.state_program_editor()
 
             if self.state == "Settings":
-                print("state: ", self.state)
-                touchActiveRegions = lcd.drawPageSettings()
-                await asyncio.sleep(1.0)    ## Deadzone for touch
-                while self.state == "Settings":
-                    touch, location = touchScreen.checkTouch()
-                    if touch == True:
-                        print("Touch! ", location)
-                        for region in touchActiveRegions:
-                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
+                await self.state_settings()
 
-                                self.oldState = self.state
-                                self.state = value
-                                break
-
-                    await asyncio.sleep(self.sleepDuration)
-
-            if self.state == "Calibrate":    ## screen alibration
-
-                print("state: ", self.state)
-                point1 = (20,20)
-                point2 = (300,220)
-                measuredP1 = None
-                measuredP2 = None
-                lcd.drawPageCalibration(point1)
-                
-                while self.state == "Calibrate":
-                    touch, location = touchScreen.checkTouch()
-                    if touch == True:
-                        print("Touch! ", location)
-                        if measuredP1 is None: # first point 
-                            measuredP1 = location
-                            lcd.drawPageCalibration(point2)
-                            await asyncio.sleep(1.0)
-
-                        else:
-                            measuredP2 = location
-                            # both points acquired,  now do calculation:
-                            calibration = touchScreen.calculateCalibrationConstants(requestedPoints=(point1, point2),
-                                                                                    measuredPoints= (measuredP1, measuredP2))
-                            
-                            config.set("TouchScreen", "x_multiplier", str(calibration[0]))
-                            config.set("TouchScreen", "x_offset",     str(calibration[1]))
-                            config.set("TouchScreen", "y_multiplier", str(calibration[2]))
-                            config.set("TouchScreen", "y_offset",     str(calibration[3]))
-                            
-                            with open('config.ini', 'wt') as file:
-                                config.write(file)
-
-                            lcd.drawMessageBox("Calibration applied!", ("OK",))
-                            self.oldState = self.state
-                            self.state = "MainMenu"
-                            await asyncio.sleep(3)
-
-                    await asyncio.sleep(self.sleepDuration)    
+            if self.state == "Calibrate": 
+                await self.state_calibrate()    
 
             if self.state == "Trainer":
                 print("state: ", self.state)
-
-                self.oldState = self.state
                 self.state = "MainMenu"
                                     
             if self.state == "HRMonitor":
                 print("state: ", self.state)
-
-                self.oldState = self.state
                 self.state = "MainMenu"
                                     
             if self.state == "Climbr":
                 print("state: ", self.state)
-
-                self.oldState = self.state
                 self.state = "MainMenu"
 
             if self.state == "History":
                 print("state: ", self.state)
-
-                self.oldState = self.state
                 self.state = "MainMenu"
 
             if self.state == "UserChange":
-                print("state: ", self.state)
-
-                numberOfUsers = len(userList.listOfUsers)
-                
-                displayedUsers = (0, min(2, numberOfUsers)-1)
-                print("displaying users:", displayedUsers," out of: ", numberOfUsers)
-                showNextPageButton = False
-                showPrevPageButton = False
-
-                if numberOfUsers > 2:
-                    showNextPageButton = True
-
-                touchActiveRegions = lcd.drawPageUserSelect(userList, displayedUsers, showPrevPageButton, showNextPageButton)
-                await asyncio.sleep(1.0)    ## Deadzone for touch
-                while self.state == "UserChange":
-                    touch, location = touchScreen.checkTouch()
-                    if touch == True:
-                        print("Touch! ", location)
-                        for region in touchActiveRegions:
-                            boundary, value = region    #### unpack the tuple containing the area xy tuple and the value
-                            if self.isInsideBoundaryBox(touchPoint=location, boundaryBox=boundary):
-
-                                if value == "PreviousPage":
-                                    displayedUsers = (displayedUsers(0)-2, displayedUsers(0)-1)
-
-                                elif value == "NextPage":
-                                    displayedUsers = (displayedUsers(1) + 1, min(displayedUsers(1)+2, numberOfUsers-1))
-                                
-                                else:
-                                    self.activeUserID = value
-                                    dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
-
-                                    self.oldState = self.state
-                                    self.state = "MainMenu"
-                                
-
-                    await asyncio.sleep(self.sleepDuration)
+                await self.state_user_change()
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               
