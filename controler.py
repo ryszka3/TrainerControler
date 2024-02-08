@@ -229,28 +229,39 @@ class Supervisor:
         
         print("state: main menu method")
         self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+        
         timer_heart = time.time()
         timer_trainer = time.time()
+
         heart_fill_colour = lcd.COLOUR_BG_LIGHT
         trainer_fill_colour = lcd.COLOUR_BG_LIGHT
         
+        
         while self.state == "MainMenu":
 
-            def apply_device_fill_colour(device: BLE_Device, fill: tuple, timer, variable:tuple):
-                
-                if device.connectionState == False:
-                    device.connect = True           ## Maintain this flag true to continue to try to connect  
-                    
-                    if device.hasLock == False:
-                        variable = lcd.COLOUR_BG_LIGHT
-                    elif time.time() - timer > 0.2:
-                        variable = lcd.COLOUR_BG_LIGHT if variable == fill else fill
-                        timer = time.time()
-                else:
-                    variable = fill
+            
 
-            apply_device_fill_colour(device_heartRateSensor, lcd.COLOUR_HEART, timer_heart, heart_fill_colour)
-            apply_device_fill_colour(device_turboTrainer, lcd.COLOUR_TT, timer_trainer, trainer_fill_colour)
+            if device_heartRateSensor.connectionState == False:
+                device_heartRateSensor.connect = True           ## Maintain this flag true to continue to try to connect  
+                
+                if device_heartRateSensor.hasLock == False:
+                    heart_fill_colour = lcd.COLOUR_BG_LIGHT
+                elif time.time() - timer_heart > 0.2:
+                    heart_fill_colour = lcd.COLOUR_BG_LIGHT if heart_fill_colour == lcd.COLOUR_HEART else lcd.COLOUR_HEART
+                    timer_heart = time.time()
+            else:
+                heart_fill_colour = lcd.COLOUR_HEART
+
+            if device_turboTrainer.connectionState == False:
+                device_turboTrainer.connect = True           ## Maintain this flag true to continue to try to connect  
+                
+                if device_turboTrainer.hasLock == False:
+                    trainer_fill_colour = lcd.COLOUR_BG_LIGHT
+                elif time.time() - timer_trainer > 0.2:
+                    trainer_fill_colour = lcd.COLOUR_BG_LIGHT if trainer_fill_colour == lcd.COLOUR_TT else lcd.COLOUR_TT
+                    timer_trainer = time.time()
+            else:
+                trainer_fill_colour = lcd.COLOUR_TT
 
             async def processTouch(value: str) -> bool:
                 self.state = value

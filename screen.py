@@ -399,7 +399,7 @@ class ScreenManager:
             font = ImageFont.truetype(font=self.font_name, size=size)
             draw.text(xy=(X_Pos + Xoffset, Y_Pos), text=str(value)+unit, fill=self.COLOUR_OUTLINE, font=font)
             
-            text_length = int(max(font.getbbox(text=label), font.getbbox(text=str(value)+unit)))
+            text_length = int(max(font.getlength(text=label), font.getlength(text=str(value)+unit)))
             touchBox_xy = (X_Pos, Y_Pos_start, X_Pos+text_length, Y_Pos)
 
             touchActiveRegions += ((touchBox_xy, label),)

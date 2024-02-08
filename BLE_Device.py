@@ -38,6 +38,7 @@ class BLE_Device:
         self.dataContainer = container
         print("starting task:", self.name)
         while(self.dataContainer.programRunningFlag == True):
+            self.hasLock = False
 
             if self.connect == False and self.connectionState == False:
                 #print("Staying off")
@@ -77,7 +78,7 @@ class BLE_Device:
                             # This will be called immediately before client.__aexit__ when
                             # the stack context manager exits.
                             stack.callback(print, "disconnecting from ", self.name)
-                        self.hasLock = False
+                        
                         # The lock is released here. The device is still connected and the
                         # Bluetooth adapter is now free to scan and connect another device
                         # without disconnecting this one.
