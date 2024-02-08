@@ -5,7 +5,8 @@ import datetime
 import time
 import csv
 import asyncio
-from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment
+import os
+from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment, CSV_headers
 from   BLE_Device  import FitnessMachine
 from   TCX         import TCXWriter
 
@@ -189,7 +190,9 @@ class WorkoutManager():
                                                     "at:",
                                                     datetime.datetime.now().strftime("%X")                                                
                                                     )))
-                            csvWriter.writerow(list(("Time", "Cadence", "Power", "HR BPM", "HR Zone", "Gradient", "Speed")))
+                            csvWriter.writerow(["Type", "Program" if entry.type == "Start" else "Freeride", 
+                                                self.currentWorkout.name if entry.type == "Start" else ""])
+                            csvWriter.writerow(CSV_headers)
                             print("Workout data file (CSV) created")
                         
                         except:
@@ -211,7 +214,7 @@ class WorkoutManager():
 
             if self.state in ("PAUSED-PROGRAM", "PAUSED_FREERIDE"):
                 if not entry == None: 
-                    if entry.type == "Start":   # Resume
+                    if entry.type == "START":   # Resume
                         TurboTrainer.start()
                         self.state = "PROGRAM"
                 else:
@@ -221,10 +224,10 @@ class WorkoutManager():
             if self.state in ("PROGRAM", "FREERIDE"):
                 
                 if not entry == None: 
-                    if entry.type == "End":   # Stop the workout, go to STOP to close the datafile
+                    if entry.type == "STOP":   # Stop the workout, go to STOP to close the datafile
                         self.state = "STOP"
                     
-                    elif entry.type == "Pause": # Pause the workout, go to PAUSE and await futher instructions
+                    elif entry.type == "PAUSE": # Pause the workout, go to PAUSE and await futher instructions
                         TurboTrainer.pause()
                         self.state = "PAUSED-" + self.state
 
@@ -284,24 +287,9 @@ class WorkoutManager():
                 await asyncio.sleep(0.01)
         
             if self.state == "STOP":
-                print("Ending  program")
-                #### Closing the cvs logfile ####
-                try:
-                    csvWriter.writerow(self.dataContainer.getIterableAverages())
-                    csvWriter.writerow(self.dataContainer.getIterableMaximums())
-                    workout_logfile.close()
-                except:
-                    pass
-
-                ####  Writing TCX file
-
-                if self.writeToTCX == True:
-                    self.TCX_Object.saveToFile(self.filename+".tcx")
-                    self.TCX_Object = None
-
-
+                print("Workout Stopped")
+                
                 ##### reset variables and the state machine #####
-                self.state = "IDLE"
                 self.currentWorkout = None
                 self.dataContainer.workoutTime = 0
                 self.dataContainer.currentSegment = WorkoutSegment("Power", 0, 100)
@@ -312,6 +300,36 @@ class WorkoutManager():
                 TurboTrainer.unsubscribeFromService(TurboTrainer.UUID_control_point)
                 TurboTrainer.stop()
                 TurboTrainer.reset()
+
+                self.state = "END"
+                await asyncio.sleep(0.01)
+
+            if self.state == "END":
+                if not entry == None: 
+                    if entry.type == "SAVE":  
+                        #### Closing the cvs logfile ####
+                        try:
+                            csvWriter.writerow(self.dataContainer.getIterableAverages())
+                            csvWriter.writerow(self.dataContainer.getIterableMaximums())
+                            workout_logfile.close()
+                        except:
+                            pass
+
+                        ####  Writing TCX file
+
+                        if self.writeToTCX == True:
+                            self.TCX_Object.saveToFile(self.filename+".tcx")
+                    
+                    elif entry.type == "DISCARD":   ## Delete CSV file
+
+                        workout_logfile.close()
+                        os.remove(self.filename + ".csv")
+
+                    if entry.type in ("SAVE", "DISCARD"):   ## Common to both save and discard
+                        self.TCX_Object = None
+                        self.state = "IDLE"
+                await asyncio.sleep(0.05)
+
         else:
             print("Workout manager closed")
 

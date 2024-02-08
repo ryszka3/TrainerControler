@@ -18,6 +18,7 @@ class BLE_Device:
         self.connectionState: bool = False
         self.queue = queue.SimpleQueue()
         self.dataContainer: DataContainer = None
+        self.hasLock: bool = False
 
     def subscribeToService(self, service_uuid, callback = None):
         self.queue.put(QueueEntry('Subscribe', {'UUID': service_uuid, 'Callback': callback}))
@@ -37,6 +38,7 @@ class BLE_Device:
         self.dataContainer = container
         print("starting task:", self.name)
         while(self.dataContainer.programRunningFlag == True):
+            self.hasLock = False
 
             if self.connect == False and self.connectionState == False:
                 #print("Staying off")
@@ -54,7 +56,7 @@ class BLE_Device:
                         # can cause errors, so use a lock to avoid this.
                         print(self.name, ": awaiting lock")
                         async with lock:
-                            
+                            self.hasLock = True
                             print("scanning for ", self.name)
                             device = await BleakScanner.find_device_by_address(self.address)
 
@@ -76,7 +78,7 @@ class BLE_Device:
                             # This will be called immediately before client.__aexit__ when
                             # the stack context manager exits.
                             stack.callback(print, "disconnecting from ", self.name)
-
+                        
                         # The lock is released here. The device is still connected and the
                         # Bluetooth adapter is now free to scan and connect another device
                         # without disconnecting this one.
