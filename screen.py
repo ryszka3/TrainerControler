@@ -972,13 +972,22 @@ class ScreenManager:
                 while font.getlength(str(section["labels"][key])) > spacing - 4:
                     font_size -= 1
                     font = ImageFont.truetype(font=self.font_name, size=font_size)
-
-                font = ImageFont.truetype(font=self.font_name, size=16)
-                draw.text(xy = (X_Pos, Y_Pos+15),
-                        text = str(section["labels"][key]),
-                        fill = self.COLOUR_TEXT_LIGHT,
-                        font = font,
-                        anchor="mm")
+               
+                value = str(section["labels"][key])
+                if value ==  "Recovery":
+                    colour = self.COLOUR_CLIMBER
+                elif value == "Aerobic":
+                    colour = self.COLOUR_TEXT_LIGHT
+                elif value == "Tempo":
+                    colour = self.COLOUR_OUTLINE
+                elif value == "Threshold":
+                    colour = self.COLOUR_BUTTON
+                elif value == "Anaerobic":
+                    colour = self.COLOUR_HEART
+                else:
+                    colour = self.COLOUR_TEXT_LIGHT
+                
+                draw.text(xy = (X_Pos, Y_Pos+15), text = value, fill = colour, font = font, anchor="mm")
 
                 # calculate spacing accordinly:
                 X_Pos += spacing
