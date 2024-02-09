@@ -568,7 +568,7 @@ class Supervisor:
             else:   ## go to detailed view state
                 data_lines = list()
                 try:
-                    with open(self.workout_history_list[value]) as file:
+                    with open(self.workout_history_list[value]["Filename"]) as file:
                         all_lines = file.readlines()
                         first_data_line = -1
                         last_data_line = -1
