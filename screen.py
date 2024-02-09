@@ -303,8 +303,10 @@ class ScreenManager:
             data_rescaled = [point - min_raw_y for point in data_rescaled]
 
         max_value = max(data_rescaled)
-        
-        data_rescaled = [height-height_reserved_for_axis - int(round(point / max_value * Y_MARGINS_RATIO * height_chartArea + (1 - Y_MARGINS_RATIO) * height_chartArea / 2)) for point in data_rescaled]
+        if max_value == 0:
+            data_rescaled = [0 for point in data_rescaled]
+        else:
+            data_rescaled = [height-height_reserved_for_axis - int(round(point / max_value * Y_MARGINS_RATIO * height_chartArea + (1 - Y_MARGINS_RATIO) * height_chartArea / 2)) for point in data_rescaled]
         
         #### plot the data
 
@@ -607,7 +609,7 @@ class ScreenManager:
         
         font = ImageFont.truetype(font=self.font_name, size=10)    
         chart_keys = (chart1, chart2)
-        charts = [self.draw_xy_plot(1, slicer(data, chart), self.WIDTH-ARROWS_ZONE-RAD-2, CHART_HEIGH - HEADERS, True) for chart in chart_keys]
+        charts = [self.draw_xy_plot(slicer(data, chart), self.WIDTH-ARROWS_ZONE-RAD-2, CHART_HEIGH - HEADERS, True) for chart in chart_keys]
 
         for ch, key in zip(charts, chart_keys):
             draw.rounded_rectangle(xy=(2, Y_Pos, self.WIDTH-ARROWS_ZONE, Y_Pos+CHART_HEIGH), fill=self.COLOUR_BG_LIGHT,radius=RAD)
@@ -862,7 +864,7 @@ class ScreenManager:
         touchActiveRegions = tuple()
         
         numberOfButtons = len(options)
-        buttonLength = int(max([draw.textlength(opt, font=font) for opt in options]) + 4)
+        buttonLength = int(max([draw.textlength(opt, font=font) for opt in options], font.getlength(message)) + 4)
         buttonHeight = 16
         marginLength = 8
 

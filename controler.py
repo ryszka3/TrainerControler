@@ -548,6 +548,9 @@ class Supervisor:
 
         self.workout_history_list = scanUserHistory(dataAndFlagContainer.activeUser.Name)
         self.last_item = len(self.workout_history_list)-1
+        self.plottable_data = ("HR BPM", "Cadence", "Speed", "Power", "Gradient")
+        self.selected_chart = 0
+        self.selected_record = 0
 
         self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
 
@@ -580,12 +583,24 @@ class Supervisor:
 
                     data = [entry for entry in csv.DictReader(data_lines, fieldnames=CSV_headers)]
 
-                    self.touchActiveRegions = lcd.draw_page_historical_record_details(self.workout_history_list[value], data, "HR BPM", "Cadence")
+                    chart1 = self.plottable_data[self.selected_chart]
+                    chart2 = self.plottable_data[(self.selected_chart + 1) % len(self.plottable_data)]
+                    
+                    self.selected_record = value
+                    self.touchActiveRegions = lcd.draw_page_historical_record_details(self.workout_history_list[self.selected_record], data, chart1, chart2)
                     
                     async def process_touch_history_details(value) -> bool:
                         
                         if value == "Back":
                             return True
+                        elif value == "Next":
+                            self.selected_chart = (self.selected_chart+1) % len(self.plottable_data)
+                        elif value == "Previous":
+                            self.selected_chart = self.selected_chart - 1 if self.selected_chart >= 1 else 4
+
+                        chart1 = self.plottable_data[self.selected_chart]
+                        chart2 = self.plottable_data[(self.selected_chart + 1) % len(self.plottable_data)]
+                        self.touchActiveRegions = lcd.draw_page_historical_record_details(self.workout_history_list[self.selected_record], data, chart1, chart2)
                     
                         return False
                     
