@@ -250,7 +250,7 @@ class WorkoutManager():
                     if isSegmentTransition: #need to start a new segment OR stop the machine
                         if len(self.currentWorkout.segments) > 0:
                             
-                            self.dataContainer.currentSegment:WorkoutSegment = self.currentWorkout.segments.pop(0)
+                            self.dataContainer.currentSegment = self.currentWorkout.segments.pop(0)
                             self.dataContainer.currentSegment.startTime = time.time()
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
                             

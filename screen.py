@@ -257,6 +257,103 @@ class ScreenManager:
         return touchActiveRegions
     
 
+    def draw_xy_plot(self, data: tuple, width: int, height: int, autoscale:bool = True, stroke: tuple = (32,  140,  20)) -> Image.Image:
+
+        im = Image.new(mode="RGB", size=(width, height), color=(42, 42, 42))
+        draw  = ImageDraw.Draw(im)
+        font_name = "Roboto-Regular.ttf"
+
+        LINE_WIDTH = 2
+        AXIS_WIDTH = 1
+        TICKS_X = 5
+        TICKS_Y = 4
+        #### scale data to fit the width
+        #### Resulting 1D list, X remapped to pixels
+        height_reserved_for_axis = 10
+        width_reserved_for_axis = 18
+        width_chartArea = width - width_reserved_for_axis
+        height_chartArea = height - height_reserved_for_axis
+        dx = (data[len(data)-1][0]-data[0][0]) / width_chartArea
+
+        data_rescaled = list()
+        sum_y = 0
+        pos_x = 1
+        count_y = 0
+        for i, point in enumerate(data):
+            scaled_x = point[0]/dx
+            if scaled_x < pos_x:
+                sum_y += point[1]
+                count_y += 1
+            else:
+                data_rescaled.append(sum_y/count_y)
+                sum_y = point[1]
+                count_y = 1
+                pos_x += 1
+
+        ##### Scale data in Y to fit in the chart area
+        Y_MARGINS_RATIO = 0.8
+        min_raw_y = min(data_rescaled) if autoscale else 0
+        max_raw_y = max(data_rescaled)
+        ratio_raw_to_pixel = (max_raw_y-min_raw_y) / (Y_MARGINS_RATIO * height_chartArea)
+        scale_y_min = (0 - (1-Y_MARGINS_RATIO) * height_chartArea / 2) * ratio_raw_to_pixel + min_raw_y
+        scale_y_max = (height_chartArea - (1-Y_MARGINS_RATIO) * height_chartArea / 2) * ratio_raw_to_pixel + min_raw_y
+
+
+        if autoscale:
+            data_rescaled = [point - min_raw_y for point in data_rescaled]
+
+        max_value = max(data_rescaled)
+        
+        data_rescaled = [height-height_reserved_for_axis - int(round(point / max_value * Y_MARGINS_RATIO * height_chartArea + (1 - Y_MARGINS_RATIO) * height_chartArea / 2)) for point in data_rescaled]
+        
+        #### plot the data
+
+        for it in range(1, len(data_rescaled)):
+            draw.line(xy=(it-1+width_reserved_for_axis, data_rescaled[it-1], it+width_reserved_for_axis, data_rescaled[it]), fill=stroke, width=LINE_WIDTH)
+        
+        #### Drawing axis box and ticks
+
+        draw.rectangle(xy=(width_reserved_for_axis, 0, width-LINE_WIDTH/2, height-height_reserved_for_axis),
+                    outline=self.COLOUR_OUTLINE, width=AXIS_WIDTH)
+        
+        tick_distance_x = int(width_chartArea / TICKS_X)
+        tick_distance_y = int(height_chartArea / TICKS_Y)
+        tick_length = 2 + AXIS_WIDTH
+        font = ImageFont.truetype(font=font_name, size=8)
+
+
+        for it in range(TICKS_X):
+            draw.line(xy=(width_reserved_for_axis + (it+1) * tick_distance_x, 0,
+                        width_reserved_for_axis + (it+1) * tick_distance_x, tick_length),
+                    fill=self.COLOUR_OUTLINE, width=AXIS_WIDTH)
+            
+            draw.line(xy=(width_reserved_for_axis + (it+1) * tick_distance_x, height-height_reserved_for_axis,
+                        width_reserved_for_axis + (it+1) * tick_distance_x, height-height_reserved_for_axis-tick_length),
+                    fill=self.COLOUR_OUTLINE, width=AXIS_WIDTH)
+            
+            label = formatTime(data[len(data)-1][0] / (TICKS_X - it))
+
+            draw.text(xy=(width_reserved_for_axis + (it+1) * tick_distance_x, height),
+                    text=label, fill=self.COLOUR_OUTLINE, font=font, anchor="mb" if it+1<TICKS_X else "rb")
+
+        
+        for it in range(TICKS_Y):
+            
+            label = str(round((scale_y_max-scale_y_min)/(TICKS_Y+1)*(it+1)+scale_y_min))
+            
+            draw.line(xy=(width_reserved_for_axis, height_reserved_for_axis + it * tick_distance_y,
+                        width_reserved_for_axis + tick_length, height_reserved_for_axis + it * tick_distance_y),
+                    fill=self.COLOUR_OUTLINE, width=AXIS_WIDTH)
+            
+            draw.text(xy=(width_reserved_for_axis-2, height - (it+1) * tick_distance_y-1),
+                    text=label, fill=self.COLOUR_OUTLINE, font=font, anchor="rm")
+            
+            draw.line(xy=(width, height_reserved_for_axis + it * tick_distance_y,
+                        width - tick_length, height_reserved_for_axis + it * tick_distance_y),
+                    fill=self.COLOUR_OUTLINE, width=AXIS_WIDTH)
+
+        return im 
+
     def drawPageHistory(self, list_of_workouts: list, lastDisplayedItem: int) -> tuple:
         
         draw = self.display.draw() # Get a PIL Draw object
@@ -300,9 +397,7 @@ class ScreenManager:
                 duration = formatTime(int(duration))
             except:
                 duration = "0"
-            draw.text(xy=(self.MARGIN_SMALL+10+45, Y_Pos+28), 
-                      text=duration, 
-                      font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
+            draw.text(xy=(self.MARGIN_SMALL+10+45, Y_Pos+28), text=duration, font=font, anchor="lt", fill=self.COLOUR_OUTLINE)
             
             #### Average power
             draw.text(xy=(self.MARGIN_SMALL+110, Y_Pos+27), text="Avg. Power:", font=font, anchor="lt", fill=self.COLOUR_FILL)
@@ -433,7 +528,128 @@ class ScreenManager:
 
         return (image, touchActiveRegions)
 
+    def draw_page_historical_record_details(self, metadata, data, chart1:str, chart2:str) -> tuple:
 
+        RAD = 8
+
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        touchActiveRegions = tuple()
+
+        font = ImageFont.truetype(font=self.font_name, size=10)
+        button_mainMenu_xy = (2, 2, 2 + int(font.getlength("Back"))+12, 2+16)
+        button_centre = ((button_mainMenu_xy[2]+button_mainMenu_xy[0])/2, (button_mainMenu_xy[3]+button_mainMenu_xy[1])/2)
+        draw.rounded_rectangle(xy=button_mainMenu_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_centre, text="Back", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_mainMenu_xy, "Back"),)
+        
+        font = ImageFont.truetype(font=self.font_name, size=16)
+        Y_Pos = 2
+        draw.text(xy = (self.WIDTH / 2, Y_Pos), text = metadata["Name"], fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
+        
+        Y_Pos += font.getbbox(text=metadata["Name"],anchor="mt")[3] + 8
+        summary_box_height = 28
+        draw.rounded_rectangle(xy=(2, Y_Pos, self.WIDTH-2, Y_Pos+summary_box_height), fill=self.COLOUR_BG_LIGHT, radius=RAD)
+        
+        font = ImageFont.truetype(font=self.font_name, size=10)
+        Y_Pos_box = Y_Pos+16
+        X_Pos_box = 8
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text="Duration:", font=font, anchor="ls", fill=self.COLOUR_FILL)
+        try:
+            duration = metadata["Max"]["Time"]
+            duration = formatTime(int(duration))
+        except:
+            duration = "0"
+
+        X_Pos_box += font.getlength(text="Duration") + 5
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text=duration, font=font, anchor="ls", fill=self.COLOUR_OUTLINE)
+        X_Pos_box += font.getlength(text=duration) + 12
+        
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text="Program:", font=font, anchor="ls", fill=self.COLOUR_FILL)
+        X_Pos_box += font.getlength(text="Program:") + 5
+        program_name = metadata["Program"]
+        program_name = (program_name[:14] + "…") if len(program_name) > 14 else program_name
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text=program_name, font=font, anchor="ls", fill=self.COLOUR_OUTLINE)
+        X_Pos_box += font.getlength(text=program_name) + 12
+        
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text="Energy:", font=font, anchor="ls", fill=self.COLOUR_FILL)
+        X_Pos_box += font.getlength(text="Energy:") + 5
+        try:
+            energy = metadata["Max"]["Energy"]
+            energy = str(round(float(energy))) + " kJ"
+        except:
+            energy = ""
+        draw.text(xy=(X_Pos_box, Y_Pos_box), text=energy, font=font, anchor="ls", fill=self.COLOUR_OUTLINE)
+        X_Pos_box += font.getlength(text=energy) + 12
+
+        GAP = 10
+        CHART_HEIGH = 84
+        HEADERS = 20
+        ARROWS_ZONE = 40
+        
+
+        Y_Pos += summary_box_height+GAP
+        
+        def slicer(data, key:str) -> tuple:
+            sliced_data = tuple()
+            for line in data:
+                try:
+                    x = float(line["T"])
+                except:
+                    x = 0
+                try:
+                    y = float(line[key])
+                except:
+                    y = 0
+
+                sliced_data += ((x, y),)
+            return sliced_data
+        
+        font = ImageFont.truetype(font=self.font_name, size=10)    
+        chart_keys = (chart1, chart2)
+        charts = [self.draw_xy_plot(1, slicer(data, chart), self.WIDTH-ARROWS_ZONE-RAD-2, CHART_HEIGH - HEADERS, True) for chart in chart_keys]
+
+        for ch, key in zip(charts, chart_keys):
+            draw.rounded_rectangle(xy=(2, Y_Pos, self.WIDTH-ARROWS_ZONE, Y_Pos+CHART_HEIGH), fill=self.COLOUR_BG_LIGHT,radius=RAD)
+            self.display.buffer.paste(ch, box=(2, Y_Pos+HEADERS))
+            X_Pos_box = 10
+            draw.text(xy=(X_Pos_box, Y_Pos+14), text=key, anchor="ls", fill=self.COLOUR_FILL, font=font)
+            X_Pos_box += 80
+            draw.text(xy=(X_Pos_box, Y_Pos+14), text="Max:", anchor="ls", fill=self.COLOUR_FILL, font=font)
+            X_Pos_box += 25
+            draw.text(xy=(X_Pos_box, Y_Pos+14), text=str(round(float(metadata["Max"][key]))), anchor="ls", fill=self.COLOUR_OUTLINE, font=font)
+            X_Pos_box += 35
+            draw.text(xy=(X_Pos_box, Y_Pos+14), text="Average:", anchor="ls", fill=self.COLOUR_FILL, font=font)
+            X_Pos_box += 42
+            draw.text(xy=(X_Pos_box, Y_Pos+14), text=str(round(float(metadata["Averages"][key]),1)), anchor="ls", fill=self.COLOUR_OUTLINE, font=font)
+
+            Y_Pos+=CHART_HEIGH+GAP
+
+        Y_Pos = int(Y_Pos - 1.6 * (CHART_HEIGH+GAP))
+        arrow_centre = self.WIDTH-ARROWS_ZONE/2
+        arrow_width = 10
+        arrow_height = 15
+
+        draw.polygon(xy=(arrow_centre, Y_Pos, 
+                        arrow_centre-arrow_width/2, Y_Pos+arrow_height, 
+                        arrow_centre+arrow_width/2, Y_Pos+arrow_height),
+                    fill=self.COLOUR_BUTTON)
+        arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+        touchActiveRegions += ((arrow_box, "Previous"),)
+        
+
+        Y_Pos += CHART_HEIGH+GAP
+        draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
+                        arrow_centre+arrow_width/2, Y_Pos,
+                        arrow_centre, Y_Pos+ arrow_height),
+                    fill=self.COLOUR_BUTTON)
+        
+        arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+        touchActiveRegions += ((arrow_box, "Next"),)
+                        
+        self.display.display()
+
+        return touchActiveRegions
 
     def drawProgramEditor(self, program: WorkoutProgram, selected_segment: int = None, editedSegment: WorkoutSegment = None) -> tuple:
 

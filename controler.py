@@ -68,7 +68,9 @@ def scanUserHistory(userName):
 
     ret = list()
     for item in list_filtered:
-        with open(path+"/"+item+".csv", mode="r") as file:
+
+        filename = path+"/"+item+".csv"
+        with open(filename, mode="r") as file:
 
             csvObj = csv.reader(file)
             
@@ -105,7 +107,7 @@ def scanUserHistory(userName):
             if program_name is None:
                 program_name = ""
 
-            workoutStats ={"Name":name, "Program": program_name, "Averages":averages, "Max":maxs}
+            workoutStats ={"Filename": filename, "Name": name, "Program": program_name, "Averages": averages, "Max": maxs}
         
             ret.append(workoutStats)
     
@@ -539,7 +541,65 @@ class Supervisor:
             return False
 
         await self.touchTester(processTouch)
+
+
+    async def stateHistory(self) -> None:
+        print("state: history method")
+
+        self.workout_history_list = scanUserHistory(dataAndFlagContainer.activeUser.Name)
+        self.last_item = len(self.workout_history_list)-1
+
+        self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
+
+        async def processTouch(value) -> bool:
+
+            if value == "MainMenu":
+                self.state = "MainMenu"
+                return True
+            elif value == "Next":
+                self.last_item = min(len(self.workout_history_list)-1, self.last_item+1)
+            elif value == "Previous": 
+                self.last_item = max(0, self.last_item-1)
+            elif value == "Export":
+                pass
+            else:   ## go to detailed view state
+                data_lines = list()
+                try:
+                    with open(self.workout_history_list[value]) as file:
+                        all_lines = file.readlines()
+                        first_data_line = -1
+                        last_data_line = -1
+                        for line_number, line in enumerate(all_lines):
+                            if line.startswith("Time,Cadence"):
+                                first_data_line = line_number + 1
+                            if line.startswith("AVERAGE:,"):
+                                last_data_line = line_number
+
+                        if first_data_line != -1 and last_data_line != -1:
+                            data_lines = all_lines[first_data_line: last_data_line]
+
+                    data = [entry for entry in csv.DictReader(data_lines, fieldnames=CSV_headers)]
+
+                    self.touchActiveRegions = lcd.draw_page_historical_record_details(self.workout_history_list[value], data, "HR BPM", "Cadence")
+                    
+                    async def process_touch_history_details(value) -> bool:
                         
+                        if value == "Back":
+                            return True
+                    
+                        return False
+                    
+                    await self.touchTester(process_touch_history_details)
+
+                except:
+                    lcd.drawMessageBox("Error accesing file!", ("OK", ))
+            
+            self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
+            return False
+        
+        await self.touchTester(processTouch)    ## touch tester returns when callback returns true
+
+
     async def touchTester(self, callback, timeout:float=None) -> bool:
         t1 = time.time()
         while True if timeout is None else time.time()-t1 < timeout: 
