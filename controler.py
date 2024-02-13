@@ -303,14 +303,14 @@ class Supervisor:
                 return True
             
             elif value == "Next":
-                self.last_item = min(len(self.discovered_devices)-1, self.last_item + 4)
+                self.last_item = min(len(self.discovered_devices), self.last_item + 4)
                 
             elif value == "Previous":
                 self.last_item = max(4, self.last_item - 4)
 
             elif value == "Rescan":
                 self.discovered_devices = await device.discover_available_devices()
-                self.last_item = min(len(self.discovered_devices)-1, 4)
+                self.last_item = min(len(self.discovered_devices), 4)
 
             else:
                 self.selected_ble_device = value
