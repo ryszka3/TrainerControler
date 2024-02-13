@@ -6,7 +6,6 @@ import SPI
 from   XPT2046 import Touch
 
 from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList
-from workouts  import Workouts
 
 def formatTime(duration: int) -> str:
     duration = round(duration)
@@ -172,13 +171,13 @@ class ScreenManager:
                       Xmargin + buttonWidth, Ymargin + buttonHeight+Yoffset)
         
         button2_screenLabel = "Connect\nTrainer"
-        button2_touchLabel = "Trainer"
+        button2_touchLabel = "TurboTrainer"
 
         button3_xy = (Xmargin, self.HEIGHT - Ymargin - buttonHeight+Yoffset, 
                       Xmargin + buttonWidth, self.HEIGHT - Ymargin+Yoffset)
         
         button3_screenLabel = "Connect\nHR Monitor"
-        button3_touchLabel = "HRMonitor"
+        button3_touchLabel = "HeartRateSensor"
 
         button4_xy = (self.WIDTH - buttonWidth -Xmargin, self.HEIGHT - Ymargin - buttonHeight + Yoffset, 
                       self.WIDTH - Xmargin, self.HEIGHT - Ymargin+Yoffset)
@@ -854,6 +853,85 @@ class ScreenManager:
 
         return touchActiveRegions
     
+    def draw_page_ble_discovery(self, device_type: str, list_of_devices: list, last_displayed_item) -> tuple:
+
+        draw = self.display.draw() # Get a PIL Draw object
+        self.display.clear(self.COLOUR_BG) 
+        touchActiveRegions = tuple()
+
+        font = ImageFont.truetype(font=self.font_name, size=10)
+        button_mainMenu_xy = (2, 2, 2 + int(font.getlength("Back"))+12, 2+16)
+        button_centre = ((button_mainMenu_xy[2]+button_mainMenu_xy[0])/2, (button_mainMenu_xy[3]+button_mainMenu_xy[1])/2)
+        draw.rounded_rectangle(xy=button_mainMenu_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_centre, text="Back", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_mainMenu_xy, "Back"),)
+
+        font = ImageFont.truetype(font=self.font_name, size=16)
+        Y_Pos = self.MARGIN_LARGE
+        draw.text(xy = (self.WIDTH / 2, Y_Pos), text = device_type, fill =self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
+        
+        button_rescan_xy = (240, 26, 240 + int(font.getlength("Re-scan"))+12, 26+22)
+        button_centre = ((button_rescan_xy[2]+button_rescan_xy[0])/2, (button_rescan_xy[3]+button_rescan_xy[1])/2)
+        draw.rounded_rectangle(xy=button_rescan_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_centre, text="Re-scan", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_rescan_xy, "Rescan"),)
+
+        font = ImageFont.truetype(font=self.font_name, size=12)
+
+        box_height = 30
+        box_width = 250
+        GAP = 14
+        RADIUS = 8
+        ARROWS_ZONE = 50
+        
+        Y_Pos = 60
+        
+        if len(list_of_devices) > 0:
+            for dev_id in range(last_displayed_item-4, last_displayed_item):
+                box_xy = (self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height)
+                draw.rounded_rectangle(xy=box_xy, radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+                
+                dev_name = (list_of_devices[dev_id]["Name"][:14] + "…") if len(list_of_devices[dev_id]["Name"]) > 14 else list_of_devices[dev_id]["Name"]
+                draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text=dev_name, font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+                draw.text(xy=(self.MARGIN_LARGE+RADIUS+120, Y_Pos+box_height/2), text=list_of_devices[dev_id]["Address"], font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+                
+                touchActiveRegions +=  ((box_xy, dev_id),)
+                Y_Pos += box_height + GAP
+        else:
+            draw.rounded_rectangle(xy=(self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height), radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+            draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text="No devices found...", font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+
+        
+        Y_Pos = 110
+        arrow_centre = self.WIDTH-ARROWS_ZONE/2
+        arrow_width = 10
+        arrow_height = 15
+        
+        if last_displayed_item > 4:
+            draw.polygon(xy=(arrow_centre, Y_Pos, 
+                            arrow_centre-arrow_width/2, Y_Pos+arrow_height, 
+                            arrow_centre+arrow_width/2, Y_Pos+arrow_height),
+                        fill=self.COLOUR_BUTTON)
+            arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+            touchActiveRegions += ((arrow_box, "Previous"),)
+        
+
+        Y_Pos += arrow_height + 30
+        if len(list_of_devices) > last_displayed_item:
+            draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
+                            arrow_centre+arrow_width/2, Y_Pos,
+                            arrow_centre, Y_Pos+ arrow_height),
+                        fill=self.COLOUR_BUTTON)
+            
+            arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+            touchActiveRegions += ((arrow_box, "Next"),)
+        
+        
+        self.display.display()
+
+        return touchActiveRegions
+
+
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
         
         self.display.buffer = self.display.buffer.convert("L")

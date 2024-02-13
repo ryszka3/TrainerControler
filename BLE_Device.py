@@ -19,6 +19,7 @@ class BLE_Device:
         self.queue = queue.SimpleQueue()
         self.dataContainer: DataContainer = None
         self.hasLock: bool = False
+        self.advertised_service_uuid = str()
 
     def subscribeToService(self, service_uuid, callback = None):
         self.queue.put(QueueEntry('Subscribe', {'UUID': service_uuid, 'Callback': callback}))
@@ -31,6 +32,18 @@ class BLE_Device:
 
     def writeToService(self, service_uuid, message):
         self.queue.put(QueueEntry('Write', {'UUID': service_uuid, 'Message': message}))
+
+
+    async def discover_available_devices(self):
+        
+        scanner = BleakScanner()
+        
+        discovered_adverts = await scanner.discover(timeout=10, return_adv=True)
+        filtered_list = [dev for dev in discovered_adverts.items() if self.advertised_service_uuid in dev[1][1].service_uuids]
+        discovered_devices = [{"Address": fi[1][0].address, "Name": fi[1][0].name} for fi in filtered_list]
+
+        return discovered_devices
+        
 
 
     async def connection_to_BLE_Device(self, lock: asyncio.Lock, container: DataContainer):
@@ -136,9 +149,12 @@ class BLE_Device:
 
 class HeartRateMonitor(BLE_Device):
     UUID_HR_measurement: str = '00002a37-0000-1000-8000-00805f9b34fb'
+    uuid_heart_rate_service = "0000180d-0000-1000-8000-00805f9b34fb"
+
     
     def __init__(self):
         super().__init__()
+        self.advertised_service_uuid = self.uuid_heart_rate_service
 
     def subscribeToService(self):
         return super().subscribeToService(self.UUID_HR_measurement, self.Callback)
@@ -178,6 +194,7 @@ class FitnessMachine(BLE_Device):
     UUID_control_point                    = "00002ad9-0000-1000-8000-00805f9b34fb" # (write, indicate): Fitness Machine Control Point
     UUID_speedCadenceSensorData           = "00002a5b-0000-1000-8000-00805f9b34fb" # (notify): 
     UUID_powerSensorData                  = "00002a63-0000-1000-8000-00805f9b34fb" # (notify): 
+    uuid_fitness_machine_service          = "00001826-0000-1000-8000-00805f9b34fb"
 
     supported_resistance = MinMaxIncrement()
     supported_power = MinMaxIncrement()
@@ -185,6 +202,7 @@ class FitnessMachine(BLE_Device):
     def __init__(self):
         super().__init__()
         self.remoteControlAcquired: bool = False
+        self.advertised_service_uuid = self.uuid_fitness_machine_service
 
     def requestSupportedPower(self):
         super().readFromService(self.UUID_supported_power_range)

@@ -282,21 +282,71 @@ class Supervisor:
 
             await asyncio.sleep(self.sleepDuration)
     
+    async def state_discover(self) -> None:
+
+        print("state: state Discover method")
+        self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state)
+        
+        if self.state == "HeartRateSensor":
+            device = device_heartRateSensor
+        elif self.state == "TurboTrainer":
+            device = device_turboTrainer
+        
+        self.discovered_devices = await device.discover_available_devices()
+        self.last_item = min(len(self.discovered_devices)-1, 4)
+        self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, self.discovered_devices, self.last_item)
+        self.selected_ble_device = None
+
+        async def processTouch(value) -> bool:
+
+            if value == "Back":
+                return True
+            
+            elif value == "Next":
+                self.last_item = min(len(self.discovered_devices)-1, self.last_item + 4)
+                
+            elif value == "Previous":
+                self.last_item = max(4, self.last_item - 4)
+
+            elif value == "Rescan":
+                self.discovered_devices = await device.discover_available_devices()
+                self.last_item = min(len(self.discovered_devices)-1, 4)
+
+            else:
+                self.selected_ble_device = value
+                return True
+            
+            self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, self.discovered_devices, self.last_item)   
+            return False
+        
+        await self.touchTester(processTouch)
+
+        if self.selected_ble_device is not None:
+
+            config.set(self.state, "sensor_name", self.discovered_devices[self.selected_ble_device]["Name"])
+            config.set(self.state, "address", self.discovered_devices[self.selected_ble_device]["Address"])
+
+            with open('config.ini', 'wt') as file:
+                config.write(file)
+
+            lcd.drawMessageBox("Config file updated", ("OK",))
+            asyncio.sleep(4)
+        
+        self.state = "Settings"
+        
+
     async def state_main_menu(self):
         
         print("state: main menu method")
         self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
         
-        timer_heart = time.time()
+        timer_heart   = time.time()
         timer_trainer = time.time()
 
         heart_fill_colour = lcd.COLOUR_BG_LIGHT
         trainer_fill_colour = lcd.COLOUR_BG_LIGHT
         
-        
         while self.state == "MainMenu":
-
-            
 
             if device_heartRateSensor.connectionState == False:
                 device_heartRateSensor.connect = True           ## Maintain this flag true to continue to try to connect  
@@ -654,13 +704,11 @@ class Supervisor:
             if self.state == "Calibrate": 
                 await self.state_calibrate()    
 
-            if self.state == "Trainer":
-                print("state: ", self.state)
-                self.state = "MainMenu"
+            if self.state == "TurboTrainer":
+                await self.state_discover()
                                     
-            if self.state == "HRMonitor":
-                print("state: ", self.state)
-                self.state = "MainMenu"
+            if self.state == "HeartRateSensor":
+                await self.state_discover()
                                     
             if self.state == "Climbr":
                 print("state: ", self.state)
