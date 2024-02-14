@@ -149,55 +149,31 @@ class ScreenManager:
     def drawPageSettings(self) -> tuple:
         draw = self.display.draw() # Get a PIL Draw object
         self.display.clear(self.COLOUR_BG) 
-        #draw = ImageDraw.Draw(self.im)
+        
         touchActiveRegions = tuple()
-        font = ImageFont.truetype(font=self.font_name, size=14)
-        buttonWidth = 110
-        buttonHeight = 70
-        Xmargin = (self.WIDTH - 2 * buttonWidth) / 3
-        Ymargin = (self.HEIGHT - 2 * buttonHeight) / 3
-        Yoffset = 16
+        font = ImageFont.truetype(font=self.font_name, size=12)
 
-        button_mainMenu_xy = (self.MARGIN_SMALL, self.MARGIN_SMALL, self.MARGIN_SMALL + 80, self.MARGIN_SMALL+20)
-        button_mainMenu_Screenlabel = "Main Menu"
-        button_mainMenu_touchlabel = "MainMenu"
+        button_height = 50
+        button_width  = int((self.WIDTH - 3 * self.MARGIN_LARGE)/2)
+        b_gap    = 10
+        x_0      = self.MARGIN_LARGE
+        y_0      = 60
+        buttons_xy = list()
+        for i in range(6):
+            x_start = x_0 + int(i/3) * (button_width + x_0)
+            y_start = y_0 + (button_height + b_gap) * (i % 3)
+            buttons_xy.append((x_start, y_start, x_start + button_width, y_start+button_height))
 
-        button1_xy = (self.WIDTH - Xmargin - buttonWidth, Ymargin + Yoffset, 
-                      self.WIDTH - Xmargin, Ymargin + buttonHeight + Yoffset)
-        button1_screenLabel = "Calibrate\nTouchscreen"
-        button1_touchLabel = "Calibrate"
+        buttons_screeen_names = ("Main Menu", "Calibrate Touchscreen", "Connect Trainer", "Connect HR Monitor", "TBD")
+        buttons_touch_labels  = ("MainMenu", "Calibrate", "TurboTrainer", "HeartRateSensor", "Climbr")
 
-        button2_xy = (Xmargin, Ymargin+Yoffset, 
-                      Xmargin + buttonWidth, Ymargin + buttonHeight+Yoffset)
-        
-        button2_screenLabel = "Connect\nTrainer"
-        button2_touchLabel = "TurboTrainer"
-
-        button3_xy = (Xmargin, self.HEIGHT - Ymargin - buttonHeight+Yoffset, 
-                      Xmargin + buttonWidth, self.HEIGHT - Ymargin+Yoffset)
-        
-        button3_screenLabel = "Connect\nHR Monitor"
-        button3_touchLabel = "HeartRateSensor"
-
-        button4_xy = (self.WIDTH - buttonWidth -Xmargin, self.HEIGHT - Ymargin - buttonHeight + Yoffset, 
-                      self.WIDTH - Xmargin, self.HEIGHT - Ymargin+Yoffset)
-        
-        button4_screenLabel = "TBD"
-        button4_touchLabel = "Climbr"
-        
-        allButtons = zip((button1_xy, button2_xy, button3_xy, button4_xy, button_mainMenu_xy),
-                         (button1_screenLabel, button2_screenLabel, button3_screenLabel, button4_screenLabel, button_mainMenu_Screenlabel),
-                         (button1_touchLabel, button2_touchLabel, button3_touchLabel, button4_touchLabel, button_mainMenu_touchlabel))
-
-
-        for button_xy, screenLabel, touchLabel in allButtons:
+        for button_xy, screenLabel, touchLabel in zip(buttons_xy, buttons_screeen_names, buttons_touch_labels):
         
             button_centre = ((button_xy[2]+button_xy[0])/2, (button_xy[3]+button_xy[1])/2)
             draw.rounded_rectangle(xy=button_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
             draw.text(xy=button_centre, text=screenLabel, anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
             touchActiveRegions += ((button_xy, touchLabel),)
 
-        #self.im.show()
         self.display.display()
         return touchActiveRegions
 

@@ -18,44 +18,6 @@ workoutManager         = WorkoutManager()
 lcd                    = ScreenManager()
 touchScreen            = TouchScreen()
 
-#####    Reading configuration file    ####
-
-config = configparser.ConfigParser()
-
-try:
-    config.read("config.ini")
-except:
-    raise Exception("Config files damaged / not available")
-
-if "HeartRateSensor" in config:
-    try:
-        device_heartRateSensor.address = config["HeartRateSensor"]["Address"]
-        device_heartRateSensor.name    = config["HeartRateSensor"]["Sensor_Name"]
-        device_heartRateSensor.type    = config["HeartRateSensor"]["Sensor_Type"]
-    except:
-        raise Exception("Config file does not contain correct entries for devices")
-    
-if "TurboTrainer" in config:
-    try:
-        device_turboTrainer.address = config["TurboTrainer"]["Address"]
-        device_turboTrainer.name    = config["TurboTrainer"]["Sensor_Name"]
-        device_turboTrainer.type    = config["TurboTrainer"]["Sensor_Type"]
-    except:
-        raise Exception("Config file does not contain correct entries for devices")
-
-
-if "TouchScreen" in config:
-    try:
-        x_multiplier = float(config["TouchScreen"]["X_Multiplier"])
-        x_offset =     float(config["TouchScreen"]["X_Offset"])
-        y_multiplier = float(config["TouchScreen"]["Y_Multiplier"])
-        y_offset =     float(config["TouchScreen"]["Y_Offset"])
-
-        touchScreen.setCalibration(x_multiplier, x_offset, y_multiplier, y_offset)
-
-    except:
-        pass    # no worries, will use the defaults for now
-
 
 def scanUserHistory(userName):
     path = os.getcwd() + "/Workouts/" + userName
@@ -123,29 +85,6 @@ class Supervisor:
         self.state: str = "UserChange"
         self.activeUserID = 0
         self.sleepDuration = 0.02
-
-    async def loop(self):
-        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
-        await asyncio.sleep(20.0)
-        print("end Wait1")
-        if device_heartRateSensor.connectionState == True:
-            device_heartRateSensor.subscribeToService()
-        #if device_turboTrainer.connectionState == True:
-        device_turboTrainer.subscribeToService(device_turboTrainer.UUID_indoor_bike_data)
-
-        print(workoutManager.workouts.getWorkoutNames())
-        workoutManager.startWorkout(1)
-        await asyncio.sleep(30.0)
-        while workoutManager.state != "IDLE":
-            await asyncio.sleep(1) 
-
-        userList.updateUserRecord(userID=self.activeUserID,
-                                  noWorkouts=dataAndFlagContainer.activeUser.noWorkouts + 1,
-                                  distance = dataAndFlagContainer.distance,
-                                  energy = dataAndFlagContainer.totalEnergy)
-        
-        dataAndFlagContainer.programRunningFlag = False
-        print("Supervisor Closed")
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -694,7 +633,7 @@ class Supervisor:
 
         lcd.assignDataContainer(dataAndFlagContainer)
         
-        while True:     #### Main loop
+        while True:     #### Main loopS
             if self.state == "MainMenu":
                 await self.state_main_menu()
 
@@ -734,12 +673,52 @@ class Supervisor:
         print("End of main loop")
 
 
-    
 supervisor = Supervisor()
+
+#####    Reading configuration file    ####
+
+config = configparser.ConfigParser()
+
+try:
+    config.read("config.ini")
+except:
+    raise Exception("Config files damaged / not available")
+
+
+
+try:
+    x_multiplier = float(config["TouchScreen"]["X_Multiplier"])
+    x_offset =     float(config["TouchScreen"]["X_Offset"])
+    y_multiplier = float(config["TouchScreen"]["Y_Multiplier"])
+    y_offset =     float(config["TouchScreen"]["Y_Offset"])
+
+    touchScreen.setCalibration(x_multiplier, x_offset, y_multiplier, y_offset)
+
+except:
+    supervisor.state = "TurboTrainer"
+    asyncio.run(supervisor.state_calibrate())
+
+try:
+    device_heartRateSensor.address = config["HeartRateSensor"]["Address"]
+    device_heartRateSensor.name    = config["HeartRateSensor"]["Sensor_Name"]
+except:
+    supervisor.state = "HeartRateSensor"
+    asyncio.run(supervisor.state_discover())
+
+try:
+    device_turboTrainer.address = config["TurboTrainer"]["Address"]
+    device_turboTrainer.name    = config["TurboTrainer"]["Sensor_Name"]
+except:
+    supervisor.state = "TurboTrainer"
+    asyncio.run(supervisor.state_discover())
+
+
+
 
 async def main():
    
     lock = asyncio.Lock()
+    supervisor.state = "UserChange"
 
     await asyncio.gather(
         device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),

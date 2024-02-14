@@ -13,7 +13,6 @@ class BLE_Device:
     def __init__(self):
         self.address: str = None
         self.name: str = None
-        self.type:str = None
         self.connect: bool = True
         self.connectionState: bool = False
         self.queue = queue.SimpleQueue()
