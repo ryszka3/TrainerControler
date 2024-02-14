@@ -292,10 +292,18 @@ class Supervisor:
         elif self.state == "TurboTrainer":
             device = device_turboTrainer
         
+        async def draw_scan_progress_bar():
+            for i in range(100):
+                self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, None, self.last_item, scan_completion_percentage=i)
+                await asyncio.sleep(0.1)
+
+        progress_bar_task = asyncio.create_task(draw_scan_progress_bar())
+
         self.discovered_devices = await device.discover_available_devices()
         self.last_item = min(len(self.discovered_devices)-1, 4)
-        self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, self.discovered_devices, self.last_item)
+        await progress_bar_task
         self.selected_ble_device = None
+        self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, self.discovered_devices, self.last_item)
 
         async def processTouch(value) -> bool:
 

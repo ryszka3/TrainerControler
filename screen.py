@@ -853,7 +853,7 @@ class ScreenManager:
 
         return touchActiveRegions
     
-    def draw_page_ble_discovery(self, device_type: str, list_of_devices: list, last_displayed_item) -> tuple:
+    def draw_page_ble_discovery(self, device_type: str, list_of_devices: list, last_displayed_item, scan_completion_percentage: int = 0) -> tuple:
 
         draw = self.display.draw() # Get a PIL Draw object
         self.display.clear(self.COLOUR_BG) 
@@ -870,62 +870,69 @@ class ScreenManager:
         Y_Pos = self.MARGIN_LARGE
         draw.text(xy = (self.WIDTH / 2, Y_Pos), text = device_type, fill =self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
         
-        button_rescan_xy = (240, 26, 240 + int(font.getlength("Re-scan"))+12, 26+22)
-        button_centre = ((button_rescan_xy[2]+button_rescan_xy[0])/2, (button_rescan_xy[3]+button_rescan_xy[1])/2)
-        draw.rounded_rectangle(xy=button_rescan_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
-        draw.text(xy=button_centre, text="Re-scan", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
-        touchActiveRegions += ((button_rescan_xy, "Rescan"),)
+        if list_of_devices is not None:
+            button_rescan_xy = (240, 26, 240 + int(font.getlength("Re-scan"))+12, 26+22)
+            button_centre = ((button_rescan_xy[2]+button_rescan_xy[0])/2, (button_rescan_xy[3]+button_rescan_xy[1])/2)
+            draw.rounded_rectangle(xy=button_rescan_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+            draw.text(xy=button_centre, text="Re-scan", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+            touchActiveRegions += ((button_rescan_xy, "Rescan"),)
 
-        font = ImageFont.truetype(font=self.font_name, size=12)
+            font = ImageFont.truetype(font=self.font_name, size=12)
 
-        box_height = 30
-        box_width = 250
-        GAP = 14
-        RADIUS = 8
-        ARROWS_ZONE = 50
-        
-        Y_Pos = 60
-        
-        if len(list_of_devices) > 0:
-            for dev_id in range(last_displayed_item-4, last_displayed_item):
-                box_xy = (self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height)
-                draw.rounded_rectangle(xy=box_xy, radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
-                
-                dev_name = (list_of_devices[dev_id]["Name"][:14] + "…") if len(list_of_devices[dev_id]["Name"]) > 14 else list_of_devices[dev_id]["Name"]
-                draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text=dev_name, font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
-                draw.text(xy=(self.MARGIN_LARGE+RADIUS+120, Y_Pos+box_height/2), text=list_of_devices[dev_id]["Address"], font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
-                
-                touchActiveRegions +=  ((box_xy, dev_id),)
-                Y_Pos += box_height + GAP
-        else:
-            draw.rounded_rectangle(xy=(self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height), radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
-            draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text="No devices found...", font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
-
-        
-        Y_Pos = 110
-        arrow_centre = self.WIDTH-ARROWS_ZONE/2
-        arrow_width = 10
-        arrow_height = 15
-        
-        if last_displayed_item > 4:
-            draw.polygon(xy=(arrow_centre, Y_Pos, 
-                            arrow_centre-arrow_width/2, Y_Pos+arrow_height, 
-                            arrow_centre+arrow_width/2, Y_Pos+arrow_height),
-                        fill=self.COLOUR_BUTTON)
-            arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
-            touchActiveRegions += ((arrow_box, "Previous"),)
-        
-
-        Y_Pos += arrow_height + 30
-        if len(list_of_devices) > last_displayed_item:
-            draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
-                            arrow_centre+arrow_width/2, Y_Pos,
-                            arrow_centre, Y_Pos+ arrow_height),
-                        fill=self.COLOUR_BUTTON)
+            box_height = 30
+            box_width = 250
+            GAP = 14
+            RADIUS = 8
+            ARROWS_ZONE = 50
             
-            arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
-            touchActiveRegions += ((arrow_box, "Next"),)
-        
+            Y_Pos = 60
+            
+            if len(list_of_devices) > 0:
+                for dev_id in range(last_displayed_item-4, last_displayed_item):
+                    box_xy = (self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height)
+                    draw.rounded_rectangle(xy=box_xy, radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+                    
+                    dev_name = (list_of_devices[dev_id]["Name"][:14] + "…") if len(list_of_devices[dev_id]["Name"]) > 14 else list_of_devices[dev_id]["Name"]
+                    draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text=dev_name, font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+                    draw.text(xy=(self.MARGIN_LARGE+RADIUS+120, Y_Pos+box_height/2), text=list_of_devices[dev_id]["Address"], font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+                    
+                    touchActiveRegions +=  ((box_xy, dev_id),)
+                    Y_Pos += box_height + GAP
+            else:
+                draw.rounded_rectangle(xy=(self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height), radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+                draw.text(xy=(self.MARGIN_LARGE+RADIUS*2, Y_Pos+box_height/2), text="No devices found...", font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+
+            
+            Y_Pos = 110
+            arrow_centre = self.WIDTH-ARROWS_ZONE/2
+            arrow_width = 10
+            arrow_height = 15
+            
+            if last_displayed_item > 4:
+                draw.polygon(xy=(arrow_centre, Y_Pos, 
+                                arrow_centre-arrow_width/2, Y_Pos+arrow_height, 
+                                arrow_centre+arrow_width/2, Y_Pos+arrow_height),
+                            fill=self.COLOUR_BUTTON)
+                arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+                touchActiveRegions += ((arrow_box, "Previous"),)
+            
+
+            Y_Pos += arrow_height + 30
+            if len(list_of_devices) > last_displayed_item:
+                draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
+                                arrow_centre+arrow_width/2, Y_Pos,
+                                arrow_centre, Y_Pos+ arrow_height),
+                            fill=self.COLOUR_BUTTON)
+                
+                arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+                touchActiveRegions += ((arrow_box, "Next"),)
+        else:
+            box_width = self.WIDTH-2*self.MARGIN_LARGE
+            box_width_filled = int(scan_completion_percentage * box_width / 100)
+            
+            draw.rounded_rectangle(xy=(self.MARGIN_LARGE, 80, self.MARGIN_LARGE+ box_width, 120), radius=8, fill=self.COLOUR_BG_LIGHT)
+            draw.rounded_rectangle(xy=(self.MARGIN_LARGE, 80, self.MARGIN_LARGE+box_width_filled, 120), radius=8, 
+                                   fill= self.COLOUR_OUTLINE, corners=(True, False, False, True))
         
         self.display.display()
 
