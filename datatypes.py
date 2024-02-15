@@ -24,7 +24,7 @@ class TCXLap:
         self.track = None
 
 class User:
-    def __init__(self, name, yob, maxhr, FTP, noWorkouts, totalDistance, totalEnergy, picture: str) -> None:
+    def __init__(self, name, yob, maxhr = 220, FTP=120, noWorkouts=0, totalDistance=0, totalEnergy=0, picture: str="pic.png") -> None:
         self.Name = name
         self.yearOfBirth = yob
         self.Max_HR = maxhr
@@ -56,6 +56,10 @@ class MinMaxIncrement:
 class UserList:
     def __init__(self) -> None:
         
+        self.reload_user_profiles()
+
+    
+    def reload_user_profiles(self):
         try:
             json_file = open('users.json', 'r+t')
         except:
@@ -70,17 +74,33 @@ class UserList:
                           entry["noWorkouts"], entry["totDistance"], entry["totEnergy"], entry["Picture"])
             self.listOfUsers.append(record)
 
+    
+    def new_user(self):
+        new_user = User("New_user", 2000)
+        self.listOfUsers.append(new_user)
+
+        return len(self.listOfUsers)-1
+    
+    def delete_user(self, user_ID):
+        self.listOfUsers.pop(user_ID)
+
+        return len(self.listOfUsers)-1
+    
     def updateUserRecord(self, userID: int, noWorkouts: int, distance: float, energy: float):
 
         self.listOfUsers[userID].noWorkouts = noWorkouts
         self.listOfUsers[userID].totalDistance += distance
         self.listOfUsers[userID].totalEnergy += energy
 
+        self.save_user_list()
+
+
+    def save_user_list(self):
+        
         dataToJSON = list()
 
         user: User
         for user in self.listOfUsers:
-
             userDict = {"Name": user.Name, 
                         "YearOfBirth": user.yearOfBirth, 
                         "FTP": user.FTP, 

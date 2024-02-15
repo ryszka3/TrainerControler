@@ -539,6 +539,76 @@ class Supervisor:
 
         await self.touchTester(processTouch)
 
+    async def state_user_edit(self) -> None:
+        print("state: user edit method")
+        self.touchActiveRegions = lcd.draw_page_user_editor()
+        
+
+        async def processTouch(value) -> bool:
+
+            if value == "Add new user":
+                new_user_id = userList.new_user()
+                self.activeUserID = new_user_id
+                dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+
+            elif value == "Change user":
+                self.state_user_change()
+
+            elif value == "Delete user":
+                self.touchActiveRegions = lcd.drawMessageBox("Delete user " + dataAndFlagContainer.activeUser.Name + "?", ("Delete", "Cancel"))
+                
+                async def process_touch_delete_user(value) -> bool:
+                    if value == "Delete":
+                        new_user_id = userList.delete_user(self.activeUserID)
+                        self.activeUserID = new_user_id
+                        dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
+                    
+                    return True
+                
+                await processTouch(process_touch_delete_user)
+            
+            elif value == "Name":
+                new_name = await self.stringEdit(dataAndFlagContainer.activeUser.Name)
+                dataAndFlagContainer.activeUser.Name = new_name
+
+            elif value == "Picture":
+                new_pic_filename = await self.stringEdit(dataAndFlagContainer.activeUser.picture)
+                dataAndFlagContainer.activeUser.picture = new_pic_filename
+
+            elif value == "YoB":
+                new_yob = await self.stringEdit(dataAndFlagContainer.activeUser.yearOfBirth)
+                dataAndFlagContainer.activeUser.yearOfBirth = new_yob
+
+            elif value == "FTP":
+                new_ftp = await self.stringEdit(dataAndFlagContainer.activeUser.FTP)
+                dataAndFlagContainer.activeUser.FTP = new_ftp
+
+            elif value == "Finish":
+                self.touchActiveRegions = lcd.drawMessageBox("Finish editing?", ("Save edits", "Discard edits", "Cancel"))
+                
+                async def process_touch_finish_editing(value) -> bool:
+                    
+                    if value == "Save edits":
+                        userList.save_user_list()
+                        self.state = "Settings"
+
+                    elif value == "Discard edits":
+                        userList.reload_user_profiles()
+                        dataAndFlagContainer.assignUser(self.activeUserID)
+                        self.state = "Settings"
+                    
+                    return True
+                    
+                await processTouch(process_touch_finish_editing)
+
+                if self.state == "Settings":
+                    return True
+                
+            self.touchActiveRegions = lcd.draw_page_user_editor()
+            return False
+
+
+        await self.touchTester(processTouch)
 
     async def stateHistory(self) -> None:
         print("state: history method")
