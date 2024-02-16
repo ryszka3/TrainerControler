@@ -1452,7 +1452,7 @@ class ScreenManager:
             button_y += button_height+button_gap
             touchActiveRegions += ((button_xy, label),)
 
-        
+        self.display.display()
         return touchActiveRegions
 
 
