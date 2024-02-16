@@ -541,7 +541,7 @@ class Supervisor:
 
     async def state_user_edit(self) -> None:
         print("state: user edit method")
-        self.touchActiveRegions = lcd.draw_page_user_editor()
+        self.touchActiveRegions = lcd.draw_page_user_editor(userList.listOfUsers[self.activeUserID])
         
 
         async def processTouch(value) -> bool:
@@ -604,7 +604,7 @@ class Supervisor:
                 if self.state == "Settings":
                     return True
                 
-            self.touchActiveRegions = lcd.draw_page_user_editor()
+            self.touchActiveRegions = lcd.draw_page_user_editor(userList.listOfUsers[self.activeUserID])
             return False
 
 

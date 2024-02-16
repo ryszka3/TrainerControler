@@ -5,7 +5,7 @@ import ILI9341 as TFT
 import SPI
 from   XPT2046 import Touch
 
-from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList
+from datatypes import DataContainer, WorkoutSegment, WorkoutParameters, WorkoutProgram, UserList, User
 
 def formatTime(duration: int) -> str:
     duration = round(duration)
@@ -1392,10 +1392,67 @@ class ScreenManager:
         self.display.display()
         return touchActiveRegions
     
-    def draw_page_user_editor(self) -> tuple:
 
+    def draw_page_user_editor(self, user: User) -> tuple:
+        self.display.clear(self.COLOUR_BG)
+        draw = self.display.draw() # Get a PIL Draw object
+        
         touchActiveRegions = tuple()
+        font = ImageFont.truetype(font=self.font_name, size=18)
+        draw.text(xy=(self.WIDTH/2, self.MARGIN_LARGE), text="User editor", font=font, anchor="mm", fill=self.COLOUR_TEXT_LIGHT)
 
+
+        BUTTONS_X = 270
+        draw_area_y_start = 40
+        
+        button_height = 20
+        button_gap = 12
+        font = ImageFont.truetype(font=self.font_name, size=12)
+        buttons_labels = ("Finish", "Add new user", "Delete user", "Change user")
+
+        button_width = max([int(font.getlength(text=label))+12 for label in buttons_labels])
+        
+        draw.rounded_rectangle(xy=(self.MARGIN_LARGE, draw_area_y_start, 210, self.HEIGHT-self.MARGIN_LARGE), radius=8, fill=self.COLOUR_BG_LIGHT)
+
+        try:
+            image = Image.open(user.picture)
+        except:
+            try:
+                image = Image.open("nopicture.png")
+            except:
+                image = Image.new("RGB",(65,60), self.COLOUR_BG)
+        
+        imageRatio = image.width/image.height
+        targetHeight = 60
+        image = image.resize((int(imageRatio*targetHeight), int(targetHeight)))
+
+        self.display.buffer.paste(image, (int(self.MARGIN_LARGE*2), int(draw_area_y_start+10)))
+        
+        text_x = self.MARGIN_LARGE + 80
+        text_y = draw_area_y_start+20
+        labels = ("Name", "Picture", "YoB", "FTP")
+        values = (user.Name, user.picture, user.yearOfBirth, round(user.FTP))
+
+        for label, value in zip(labels, values):
+            draw.text(xy=(text_x, text_y), text=label, anchor="ls", font=font, fill=self.COLOUR_FILL)
+            text_y += 16
+            draw.text(xy=(text_x+30, text_y), text=str(value), anchor="ls", font=font, fill=self.COLOUR_TEXT_LIGHT)
+            text_y += 24
+            box_xy = (text_x, text_y, 210, text_y + 32)
+            touchActiveRegions += ((box_xy, label),)
+
+
+        button_y = draw_area_y_start
+        for label in buttons_labels:
+            
+            button_xy = (BUTTONS_X-int(button_width/2), button_y, BUTTONS_X+int(button_width/2), button_y + button_height)
+            button_centre_xy = (BUTTONS_X, button_y+ int(button_height/2))
+            draw.rounded_rectangle(xy=button_xy, radius=3, fill=self.COLOUR_BUTTON)
+            draw.text(xy=button_centre_xy, text=label, font=font, fill=self.COLOUR_TEXT_LIGHT, anchor="mm")
+            button_y += button_height+button_gap
+            touchActiveRegions += ((button_xy, label),)
+
+        
         return touchActiveRegions
 
 
