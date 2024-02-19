@@ -11,6 +11,10 @@ from   BLE_Device  import FitnessMachine
 from   TCX         import TCXWriter
 
 
+class Buzzer:
+    def __init__(self, pin) -> None:
+        self.pin = pin
+
 class Workouts:
 
     def __init__(self) -> None:
