@@ -864,7 +864,8 @@ class ScreenManager:
             Y_Pos = 60
             
             if len(list_of_devices) > 0:
-                for dev_id in range(last_displayed_item-4, last_displayed_item):
+
+                for dev_id in range(max(last_displayed_item-4, 0), last_displayed_item):
                     box_xy = (self.MARGIN_LARGE, Y_Pos, self.MARGIN_LARGE+box_width, Y_Pos+box_height)
                     draw.rounded_rectangle(xy=box_xy, radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
                     
@@ -894,7 +895,7 @@ class ScreenManager:
             
 
             Y_Pos += arrow_height + 30
-            if len(list_of_devices) > last_displayed_item:
+            if len(list_of_devices) > last_displayed_item and len(list_of_devices) > 0:
                 draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
                                 arrow_centre+arrow_width/2, Y_Pos,
                                 arrow_centre, Y_Pos+ arrow_height),
@@ -908,7 +909,7 @@ class ScreenManager:
             
             draw.rounded_rectangle(xy=(self.MARGIN_LARGE, 80, self.MARGIN_LARGE+ box_width, 120), radius=8, fill=self.COLOUR_BG_LIGHT)
             draw.rounded_rectangle(xy=(self.MARGIN_LARGE, 80, self.MARGIN_LARGE+box_width_filled, 120), radius=8, 
-                                   fill= self.COLOUR_OUTLINE, corners=(True, False, False, True))
+                                   fill= self.COLOUR_OUTLINE)
         
         self.display.display()
 

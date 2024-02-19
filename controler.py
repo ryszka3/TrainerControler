@@ -232,14 +232,18 @@ class Supervisor:
             device = device_turboTrainer
         
         async def draw_scan_progress_bar():
-            for i in range(100):
-                self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, None, self.last_item, scan_completion_percentage=i)
-                await asyncio.sleep(0.1)
+            for i in range(25):
+                print("Drawing progress bar")
+                self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, None, None, scan_completion_percentage=i*4)
+                await asyncio.sleep(0.4)
 
-        progress_bar_task = asyncio.create_task(draw_scan_progress_bar())
+        print("Scanner: awaiting lock")
+        async with self.lock:
+            progress_bar_task = asyncio.create_task(draw_scan_progress_bar())
+            self.discovered_devices = []
+            self.discovered_devices = await device.discover_available_devices()
 
-        self.discovered_devices = await device.discover_available_devices()
-        self.last_item = min(len(self.discovered_devices)-1, 4)
+        self.last_item = min(len(self.discovered_devices), 4)
         await progress_bar_task
         self.selected_ble_device = None
         self.touchActiveRegions = lcd.draw_page_ble_discovery(self.state, self.discovered_devices, self.last_item)
@@ -277,7 +281,7 @@ class Supervisor:
                 config.write(file)
 
             lcd.drawMessageBox("Config file updated", ("OK",))
-            asyncio.sleep(4)
+            await asyncio.sleep(4)
         
         self.state = "Settings"
         
@@ -629,8 +633,8 @@ class Supervisor:
 
 
 
-    async def loopy(self):
-
+    async def loopy(self, lock: asyncio.Lock):
+        self.lock = lock
         lcd.assignDataContainer(dataAndFlagContainer)
         
         while True:     #### Main loopS
@@ -723,7 +727,7 @@ async def main():
     await asyncio.gather(
         device_heartRateSensor.connection_to_BLE_Device(lock, dataAndFlagContainer),
         device_turboTrainer.   connection_to_BLE_Device(lock, dataAndFlagContainer),
-        supervisor.loopy(),
+        supervisor.loopy(lock),
         workoutManager.run(device_turboTrainer, dataAndFlagContainer)
     )
 
