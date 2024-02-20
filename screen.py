@@ -173,7 +173,7 @@ class ScreenManager:
             y_start = y_0 + (button_height + b_gap) * (i % 3)
             buttons_xy.append((x_start, y_start, x_start + button_width, y_start+button_height))
 
-        buttons_screeen_names = ("Calibrate Touchscreen", "TBD", "General", "Connect Trainer", "Connect HR Monitor", "TBD")
+        buttons_screeen_names = ("Calibrate Touchscreen", "Edit Users", "General", "Connect Trainer", "Connect HR Monitor", "TBD")
         buttons_touch_labels  = ("Calibrate", "UserEdit", "General", "TurboTrainer", "HeartRateSensor", "Climbr")
 
         for button_xy, screenLabel, touchLabel in zip(buttons_xy, buttons_screeen_names, buttons_touch_labels):
@@ -1434,11 +1434,12 @@ class ScreenManager:
         values = (user.Name, user.picture, user.yearOfBirth, round(user.FTP))
 
         for label, value in zip(labels, values):
+            box_y = text_y - 12
             draw.text(xy=(text_x, text_y), text=label, anchor="ls", font=font, fill=self.COLOUR_FILL)
             text_y += 16
             draw.text(xy=(text_x+30, text_y), text=str(value), anchor="ls", font=font, fill=self.COLOUR_TEXT_LIGHT)
             text_y += 24
-            box_xy = (text_x, text_y, 210, text_y + 32)
+            box_xy = (text_x, box_y, 210, box_y + 42)
             touchActiveRegions += ((box_xy, label),)
 
 

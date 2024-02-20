@@ -520,10 +520,10 @@ class Supervisor:
             numberOfUsers = len(userList.listOfUsers)
             
             if value == "PreviousPage":
-                self.displayedUsers = (self.displayedUsers(0)-2, self.displayedUsers(0)-1)
+                self.displayedUsers = (self.displayedUsers[0]-2, self.displayedUsers[0]-1)
 
             elif value == "NextPage":
-                self.displayedUsers = (self.displayedUsers(1) + 1, min(self.displayedUsers(1)+2, numberOfUsers-1))
+                self.displayedUsers = (self.displayedUsers[1] + 1, min(self.displayedUsers[1]+2, numberOfUsers-1))
                     
             else:
                 self.activeUserID = value
@@ -531,7 +531,7 @@ class Supervisor:
                 self.state = "MainMenu"
                 return True
             
-            showNextPageButton = True if numberOfUsers > self.displayedUsers[1] else False
+            showNextPageButton = True if numberOfUsers > self.displayedUsers[1] + 1 else False
             showPrevPageButton = True if self.displayedUsers[0] > 0 else False
             self.touchActiveRegions = lcd.drawPageUserSelect(userList, self.displayedUsers, showPrevPageButton, showNextPageButton)
             
@@ -552,7 +552,7 @@ class Supervisor:
                 dataAndFlagContainer.assignUser(userList.listOfUsers[self.activeUserID])
 
             elif value == "Change user":
-                self.state_user_change()
+                await self.state_user_change()
 
             elif value == "Delete user":
                 self.touchActiveRegions = lcd.drawMessageBox("Delete user " + dataAndFlagContainer.activeUser.Name + "?", ("Delete", "Cancel"))
@@ -565,7 +565,7 @@ class Supervisor:
                     
                     return True
                 
-                await processTouch(process_touch_delete_user)
+                await self.touchTester(process_touch_delete_user)
             
             elif value == "Name":
                 new_name = await self.stringEdit(dataAndFlagContainer.activeUser.Name)
@@ -576,12 +576,22 @@ class Supervisor:
                 dataAndFlagContainer.activeUser.picture = new_pic_filename
 
             elif value == "YoB":
-                new_yob = await self.stringEdit(dataAndFlagContainer.activeUser.yearOfBirth)
-                dataAndFlagContainer.activeUser.yearOfBirth = new_yob
+                try:
+                    new_yob = int(await self.stringEdit(str(dataAndFlagContainer.activeUser.yearOfBirth)))
+                    if new_yob > 1950 and new_yob < 2024:
+                        dataAndFlagContainer.activeUser.yearOfBirth = new_yob
+                except:
+                    pass
+                
 
             elif value == "FTP":
-                new_ftp = await self.stringEdit(dataAndFlagContainer.activeUser.FTP)
-                dataAndFlagContainer.activeUser.FTP = new_ftp
+                try:
+                    new_ftp = int(await self.stringEdit(str(dataAndFlagContainer.activeUser.FTP)))
+                    if new_yob > 1950 and new_yob < 2024:
+                        dataAndFlagContainer.activeUser.FTP = new_ftp
+                except:
+                    pass
+
 
             elif value == "Finish":
                 self.touchActiveRegions = lcd.drawMessageBox("Finish editing?", ("Save edits", "Discard edits", "Cancel"))
@@ -599,7 +609,7 @@ class Supervisor:
                     
                     return True
                     
-                await processTouch(process_touch_finish_editing)
+                await self.touchTester(process_touch_finish_editing)
 
                 if self.state == "Settings":
                     return True
@@ -736,6 +746,9 @@ class Supervisor:
 
             if self.state == "UserChange":
                 await self.state_user_change()
+
+            if self.state == "UserEdit":
+                await self.state_user_edit()
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               
