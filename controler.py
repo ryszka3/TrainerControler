@@ -4,6 +4,7 @@ logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 import asyncio, configparser, queue, os, csv
 import time
+import shutil
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
@@ -87,6 +88,7 @@ class Supervisor:
         self.state: str = "UserChange"
         self.activeUserID = 0
         self.sleepDuration = 0.02
+        self.USBPATH = "/mnt/usb"
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -705,6 +707,13 @@ class Supervisor:
 
         async def processTouch(value) -> bool:
 
+            async def copy_file_to_USB() -> None:
+                if os.path.isdir(self.USBPATH):
+                    shutil.copy2(self.selected_filename, self.USBPATH)
+                else:
+                    lcd.drawMessageBox("No USB detected!", ("OK", ))
+                    await asyncio.sleep(4)
+
             if value == "MainMenu":
                 self.state = "MainMenu"
                 return True
@@ -736,7 +745,7 @@ class Supervisor:
                                 mqtt.export_file(self.selected_filename)
 
                         elif self.selected_export_method == "USB":
-                            pass
+                            await copy_file_to_USB()
 
                         await asyncio.sleep(1)
                     
@@ -790,9 +799,10 @@ class Supervisor:
                                     await mqtt.connect()
                                     if mqtt.client.is_connected():
                                         mqtt.export_file(self.selected_filename)
-                                        
+                                        mqtt.disconnect()
+                                    
                                 elif value == "USB":
-                                    pass
+                                    await copy_file_to_USB()
 
                                 return True
 
