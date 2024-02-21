@@ -581,6 +581,7 @@ class Supervisor:
             return False
 
         await self.touchTester(processTouch)
+        self.state = "General"
 
 
 
@@ -796,7 +797,9 @@ class Supervisor:
                 await self.state_program_editor()
 
             if self.state == "Settings":
-                await self.state_settings()
+                buttons_screeen_names = ("Calibrate Touchscreen", "Edit Users", "General", "Connect Trainer", "Connect HR Monitor", "TBD")
+                buttons_touch_labels  = ("Calibrate", "UserEdit", "General", "TurboTrainer", "HeartRateSensor", "Climbr")
+                await self.state_settings(buttons_screeen_names, buttons_touch_labels, "MainMenu")
 
             if self.state == "Calibrate": 
                 await self.state_calibrate()    
@@ -816,6 +819,13 @@ class Supervisor:
 
             if self.state == "UserChange":
                 await self.state_user_change()
+
+            if self.state == "General":
+                buttons_screeen_names = ("MQTT Settings")
+                await self.state_settings(buttons_screeen_names, None, "Settings")
+
+            if self.state == "MQTT Settings":
+                await self.state_settings_mqtt()
             
             if dataAndFlagContainer.programRunningFlag == False:
                 break                               

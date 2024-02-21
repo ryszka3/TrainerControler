@@ -147,7 +147,7 @@ class ScreenManager:
         self.dataContainer:DataContainer = container
     
 
-    def drawPageSettings(self) -> tuple:
+    def drawPageSettings(self, screen_names: tuple, touch_labels: tuple, back_state: str) -> tuple:
         draw = self.display.draw() # Get a PIL Draw object
         self.display.clear(self.COLOUR_BG) 
         
@@ -155,11 +155,11 @@ class ScreenManager:
 
         font = ImageFont.truetype(font=self.font_name, size=10)
         button_mainMenu_xy = (self.MARGIN_SMALL, self.MARGIN_SMALL,
-                              self.MARGIN_SMALL + int(font.getlength("Main Menu"))+4, self.MARGIN_SMALL+16)
+                              self.MARGIN_SMALL + int(font.getlength("Back"))+4, self.MARGIN_SMALL+16)
         button_centre = ((button_mainMenu_xy[2]+button_mainMenu_xy[0])/2, (button_mainMenu_xy[3]+button_mainMenu_xy[1])/2)
         draw.rounded_rectangle(xy=button_mainMenu_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
-        draw.text(xy=button_centre, text="Main Menu", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
-        touchActiveRegions += ((button_mainMenu_xy, "MainMenu"),)
+        draw.text(xy=button_centre, text="Back", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_mainMenu_xy, back_state),)
 
         font = ImageFont.truetype(font=self.font_name, size=12)
 
@@ -174,10 +174,9 @@ class ScreenManager:
             y_start = y_0 + (button_height + b_gap) * (i % 3)
             buttons_xy.append((x_start, y_start, x_start + button_width, y_start+button_height))
 
-        buttons_screeen_names = ("Calibrate Touchscreen", "TBD", "General", "Connect Trainer", "Connect HR Monitor", "TBD")
-        buttons_touch_labels  = ("Calibrate", "UserEdit", "General", "TurboTrainer", "HeartRateSensor", "Climbr")
+        touch_labels = screen_names if touch_labels is None else touch_labels
 
-        for button_xy, screenLabel, touchLabel in zip(buttons_xy, buttons_screeen_names, buttons_touch_labels):
+        for button_xy, screenLabel, touchLabel in zip(buttons_xy, screen_names, touch_labels):
         
             button_centre = ((button_xy[2]+button_xy[0])/2, (button_xy[3]+button_xy[1])/2)
             draw.rounded_rectangle(xy=button_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
