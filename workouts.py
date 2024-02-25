@@ -266,7 +266,7 @@ class WorkoutManager():
                     try:
                         if self.dataContainer.currentSegment.elapsedTime < self.dataContainer.currentSegment.duration:
                             isSegmentTransition = False
-                        elif self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime <= 3 and self.buzzer.busy == False:
+                        if self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime <= 3 and self.buzzer.busy == False:
                             beep_task = asyncio.create_task(self.buzzer.beep(3, 0.2, 1))
                             
                     except:
