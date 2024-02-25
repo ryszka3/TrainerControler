@@ -25,9 +25,9 @@ class Buzzer:
         self.busy = True
         for b in range(number_of_beeps):
             self.gpio.output(self.pin, True)
-            asyncio.sleep(on_duration)
+            await asyncio.sleep(on_duration)
             self.gpio.output(self.pin, False)
-            asyncio.sleep(period - on_duration)
+            await asyncio.sleep(period - on_duration)
         self.busy = False
 
 
@@ -136,7 +136,7 @@ class WorkoutManager():
         self.writeToTCX: bool = True
         self.filename = None
         self.TCX_Object: TCXWriter = None
-        self.buzzer = Buzzer(99)
+        self.buzzer = Buzzer(16)
 
 
     def numberOfWorkoutPrograms(self) -> int:
