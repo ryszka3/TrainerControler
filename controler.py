@@ -88,7 +88,7 @@ class Supervisor:
         self.state: str = "UserChange"
         self.activeUserID = 0
         self.sleepDuration = 0.02
-        self.USBPATH = "/mnt/usb"
+        self.USBPATH = "/media/usb"
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -708,7 +708,12 @@ class Supervisor:
         async def processTouch(value) -> bool:
 
             async def copy_file_to_USB() -> None:
-                if os.path.isdir(self.USBPATH):
+                if "sda1" in os.listdir("/dev/"):
+                    if not os.path.isdir(self.USBPATH):
+                        os.system("sudo mkdir " + self.USBPATH)
+                    if not os.path.ismount(self.USBPATH):
+                        os.system("sudo mount /dev/sda1 " + self.USBPATH)
+                
                     shutil.copy2(self.selected_filename, self.USBPATH)
                 else:
                     lcd.drawMessageBox("No USB detected!", ("OK", ))
@@ -751,6 +756,9 @@ class Supervisor:
                     
                     if self.selected_export_method == "MQTT":
                         mqtt.disconnect()
+                    
+                    if self.selected_export_method == "USB":
+                        os.system("sudo umount " + self.USBPATH)
                     
                     lcd.drawMessageBox("Export completed", ("OK",))
                     await asyncio.sleep(4)
@@ -803,6 +811,7 @@ class Supervisor:
                                     
                                 elif value == "USB":
                                     await copy_file_to_USB()
+                                    os.system("sudo umount " + self.USBPATH)
 
                                 return True
 
