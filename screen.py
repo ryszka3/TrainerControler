@@ -1488,9 +1488,9 @@ class ScreenManager:
         for label, value in zip(labels, values):
             draw.text(xy=(text_x, text_y), text=label, anchor="ls", font=font, fill=self.COLOUR_FILL)
             draw.text(xy=(text_x+60, text_y), text=str(value), anchor="ls", font=font, fill=self.COLOUR_TEXT_LIGHT)
-            text_y += 26
-            box_xy = (text_x, text_y, 210, text_y + 32)
+            box_xy = (text_x, text_y-16, 210, text_y + 6)
             touchActiveRegions += ((box_xy, label),)
+            text_y += 26
 
 
         button_y = draw_area_y_start

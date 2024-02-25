@@ -519,7 +519,7 @@ class Supervisor:
                 
             elif value == "Port":
                 mqtt.port = int(await self.stringEdit(str(mqtt.port)))
-                config.set("MQTT", "port", mqtt.port)
+                config.set("MQTT", "port", str(mqtt.port))
 
             elif value == "Topic":
                 mqtt.topic = await self.stringEdit(mqtt.topic)
@@ -821,7 +821,7 @@ class Supervisor:
                 await self.state_user_change()
 
             if self.state == "General":
-                buttons_screeen_names = ("MQTT Settings")
+                buttons_screeen_names = ("MQTT Settings",)
                 await self.state_settings(buttons_screeen_names, None, "Settings")
 
             if self.state == "MQTT Settings":
