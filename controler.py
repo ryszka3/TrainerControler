@@ -496,9 +496,9 @@ class Supervisor:
         self.selected_program = None
         self.state = "MainMenu" 
 
-    async def state_settings(self):
+    async def state_settings(self, buttons_screeen_names, buttons_touch_labels, back_state) -> None: 
         print("state: Setting method")
-        self.touchActiveRegions = lcd.drawPageSettings()
+        self.touchActiveRegions = lcd.drawPageSettings(buttons_screeen_names, buttons_touch_labels, back_state)
         
         async def processTouch(value: str) -> bool:
             self.state = value
