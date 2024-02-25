@@ -8,6 +8,7 @@ from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
 from   screen      import ScreenManager, TouchScreen
+from   mqtt        import MQTT_Exporter
 
 
 userList               = UserList()
@@ -17,6 +18,7 @@ device_turboTrainer    = FitnessMachine()
 workoutManager         = WorkoutManager()
 lcd                    = ScreenManager()
 touchScreen            = TouchScreen()
+mqtt                   = MQTT_Exporter()
 
 
 def scanUserHistory(userName):
@@ -498,9 +500,9 @@ class Supervisor:
         self.selected_program = None
         self.state = "MainMenu" 
 
-    async def state_settings(self):
+    async def state_settings(self, buttons_screeen_names, buttons_touch_labels, back_state) -> None: 
         print("state: Setting method")
-        self.touchActiveRegions = lcd.drawPageSettings()
+        self.touchActiveRegions = lcd.drawPageSettings(buttons_screeen_names, buttons_touch_labels, back_state)
         
         async def processTouch(value: str) -> bool:
             self.state = value
@@ -508,6 +510,85 @@ class Supervisor:
 
         await self.touchTester(processTouch)
     
+    async def state_settings_mqtt(self):
+
+        print("state: Setting method")
+
+        self.touchActiveRegions = lcd.draw_page_settings_mqtt(mqtt)
+        
+        async def processTouch(value: str) -> bool:
+            if value == "Broker":
+                mqtt.broker = await self.stringEdit(mqtt.broker)
+                config.set("MQTT", "broker", mqtt.broker)
+                
+            elif value == "Port":
+                mqtt.port = int(await self.stringEdit(str(mqtt.port)))
+                config.set("MQTT", "port", str(mqtt.port))
+
+            elif value == "Topic":
+                mqtt.topic = await self.stringEdit(mqtt.topic)
+                config.set("MQTT", "topic", mqtt.topic)
+
+            elif value == "Client ID":
+                mqtt.client_id = await self.stringEdit(mqtt.client_id)
+                config.set("MQTT", "client_id", mqtt.client_id)
+
+            elif value == "Username":
+                mqtt.username = await self.stringEdit(mqtt.username)
+                config.set("MQTT", "username", mqtt.username)
+
+            elif value == "Password":
+                mqtt.password = await self.stringEdit(mqtt.password)
+                config.set("MQTT", "password", mqtt.password)
+
+            elif value == "Save":
+          
+                with open('config.ini', 'wt') as file:
+                    config.write(file)
+
+                return True
+            
+            elif value == "Discard":
+                try:
+                    mqtt.broker   = config["MQTT"]["broker"]
+                    mqtt.port = int(config["MQTT"]["port"])
+                    mqtt.username = config["MQTT"]["username"]
+                    if mqtt.username == "None":
+                        mqtt.username = None
+                    mqtt.password = config["MQTT"]["password"]
+                    if mqtt.password == "None":
+                        mqtt.password = None
+                    mqtt.client_id =config["MQTT"]["client_id"]
+                    mqtt.topic     =config["MQTT"]["topic"]
+
+                except:
+                    mqtt.broker   = "broker.emqx.io"
+                    mqtt.port = 1883
+                    mqtt.username = None
+                    mqtt.password = None
+                    mqtt.client_id = "TrainerControler"
+                    mqtt.topic     = "TrainerControler/MQTT_export"
+
+                    config.set("MQTT", "broker", mqtt.broker)
+                    config.set("MQTT", "port", str(mqtt.port))
+                    config.set("MQTT", "topic", mqtt.topic)
+                    config.set("MQTT", "client_id", mqtt.client_id)
+                    config.set("MQTT", "username", mqtt.username)
+                    config.set("MQTT", "password", mqtt.password)
+
+                    with open('config.ini', 'wt') as file:
+                        config.write(file)
+                
+                return True
+            
+            self.touchActiveRegions = lcd.draw_page_settings_mqtt(mqtt)
+            return False
+
+        await self.touchTester(processTouch)
+        self.state = "General"
+
+
+
     async def state_user_change(self):
         print("state: user change method")
 
@@ -730,7 +811,9 @@ class Supervisor:
                 await self.state_program_editor()
 
             if self.state == "Settings":
-                await self.state_settings()
+                buttons_screeen_names = ("Calibrate Touchscreen", "Edit Users", "General", "Connect Trainer", "Connect HR Monitor", "TBD")
+                buttons_touch_labels  = ("Calibrate", "UserEdit", "General", "TurboTrainer", "HeartRateSensor", "Climbr")
+                await self.state_settings(buttons_screeen_names, buttons_touch_labels, "MainMenu")
 
             if self.state == "Calibrate": 
                 await self.state_calibrate()    
@@ -750,6 +833,13 @@ class Supervisor:
 
             if self.state == "UserChange":
                 await self.state_user_change()
+
+            if self.state == "General":
+                buttons_screeen_names = ("MQTT Settings",)
+                await self.state_settings(buttons_screeen_names, None, "Settings")
+
+            if self.state == "MQTT Settings":
+                await self.state_settings_mqtt()
 
             if self.state == "UserEdit":
                 await self.state_user_edit()
@@ -798,6 +888,21 @@ try:
 except:
     supervisor.state = "TurboTrainer"
     asyncio.run(supervisor.state_discover())
+
+try:
+    mqtt.broker   = config["MQTT"]["broker"]
+    mqtt.port = int(config["MQTT"]["port"])
+    mqtt.username = config["MQTT"]["username"]
+    if mqtt.username == "None":
+        mqtt.username = None
+    mqtt.password = config["MQTT"]["password"]
+    if mqtt.password == "None":
+        mqtt.password = None
+    mqtt.client_id =config["MQTT"]["client_id"]
+    mqtt.topic     =config["MQTT"]["topic"]
+except:
+    pass
+
 
 
 
