@@ -741,7 +741,7 @@ class Supervisor:
 
                 if self.selected_export_method != "Cancel":
                     if self.selected_export_method == "MQTT":
-                        await mqtt.connect()
+                        mqtt.connect()
                     
                     for fi in self.workout_history_list:
 
@@ -811,7 +811,7 @@ class Supervisor:
                                 elif value == "Garmin":
                                     pass
                                 elif value == "MQTT":
-                                    await mqtt.connect()
+                                    mqtt.connect()
                                     if mqtt.client.is_connected():
                                         mqtt.export_file(self.selected_filename)
                                         selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
@@ -843,6 +843,7 @@ class Supervisor:
 
                 except:
                     lcd.drawMessageBox("Error accesing file!", ("OK", ))
+                    await asyncio.sleep(3)
             
             self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
             return False

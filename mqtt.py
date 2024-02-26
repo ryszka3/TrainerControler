@@ -1,4 +1,4 @@
-from paho.mqtt.client import Client as mqtt_client
+from paho.mqtt import client as mqtt_client
 from paho.mqtt.client import MQTTMessage
 import json
 import hashlib
@@ -18,10 +18,10 @@ class MQTT_Exporter:
         self.topic = "TrainerControler/MQTT_export"
 
 
-    async def connect(self) -> bool:
+    def connect(self) -> bool:
         
         # Set Connecting Client ID
-        self.client = mqtt_client(self.client_id)
+        self.client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, self.client_id)
         
         if self.username is not None and self.password is not None:
             self.client.username_pw_set(self.username, self.password)
@@ -29,25 +29,26 @@ class MQTT_Exporter:
         self.client.on_connect = self.on_connect
         self.client.on_publish = self.on_publish
         self.client.connect(self.broker, self.port)
+        self.client.loop_start()
         if self.client.is_connected():
-            self.client.loop_start()
+            time.sleep(0.5)
+            return True
         else:
             return False
-        time.sleep(1)
-        return True
+        
         
 
-    def on_publish(self, client, userdata, mid):
+    def on_publish(self, client, userdata, mid, reason_code, properties):
 
         self.mid_value = mid
         self.pub_ack = True
 
 
-    def on_connect(self, client, userdata, flags, rc):
-        if rc == 0:
+    def on_connect(self, client, userdata, connect_flags, reason_code, properties):
+        if reason_code == 0:
             print("Connected to MQTT Broker!")
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print("Failed to connect, return code %d\n", reason_code)
 
 
     def mqtt_publish(self, message: str) -> bool:
@@ -111,3 +112,4 @@ class MQTT_Exporter:
                     end.extend(b'x' * (200 - len(end)))
                     self.mqtt_publish(end)
                     break
+
