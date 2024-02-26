@@ -6,9 +6,30 @@ import time
 import csv
 import asyncio
 import os
+import GPIO
 from   datatypes   import QueueEntry, DataContainer, WorkoutProgram, WorkoutSegment, CSV_headers
 from   BLE_Device  import FitnessMachine
 from   TCX         import TCXWriter
+
+
+class Buzzer:
+    def __init__(self, pin) -> None:
+        self.pin = pin
+        self.busy: bool = False
+        self.gpio = GPIO.get_platform_gpio()
+        self.gpio.setup(self.pin, GPIO.OUT)
+        self.gpio.output(self.pin, False)
+
+
+    async def beep(self, number_of_beeps: int, on_duration: float, period: float) -> None:
+        self.busy = True
+        for b in range(number_of_beeps):
+            self.gpio.output(self.pin, True)
+            await asyncio.sleep(on_duration)
+            self.gpio.output(self.pin, False)
+            await asyncio.sleep(period - on_duration)
+        self.busy = False
+
 
 
 class Workouts:
@@ -115,6 +136,7 @@ class WorkoutManager():
         self.writeToTCX: bool = True
         self.filename = None
         self.TCX_Object: TCXWriter = None
+        self.buzzer = Buzzer(16)
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -244,6 +266,9 @@ class WorkoutManager():
                     try:
                         if self.dataContainer.currentSegment.elapsedTime < self.dataContainer.currentSegment.duration:
                             isSegmentTransition = False
+                        if self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime <= 3 and self.buzzer.busy == False:
+                            beep_task = asyncio.create_task(self.buzzer.beep(3, 0.2, 1))
+                            
                     except:
                         pass
 
