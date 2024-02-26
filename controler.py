@@ -715,6 +715,10 @@ class Supervisor:
                         os.system("sudo mount /dev/sda1 " + self.USBPATH)
                 
                     shutil.copy2(self.selected_filename, self.USBPATH)
+                    selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                    if os.path.exists(selected_filename_tcx):
+                        shutil.copy2(selected_filename_tcx, self.USBPATH)
+                    
                 else:
                     lcd.drawMessageBox("No USB detected!", ("OK", ))
                     await asyncio.sleep(4)
@@ -748,6 +752,9 @@ class Supervisor:
                         elif self.selected_export_method == "MQTT":
                             if mqtt.client.is_connected():
                                 mqtt.export_file(self.selected_filename)
+                                selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                                if os.path.exists(selected_filename_tcx):
+                                    mqtt.export_file(selected_filename_tcx)
 
                         elif self.selected_export_method == "USB":
                             await copy_file_to_USB()
@@ -807,6 +814,9 @@ class Supervisor:
                                     await mqtt.connect()
                                     if mqtt.client.is_connected():
                                         mqtt.export_file(self.selected_filename)
+                                        selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                                        if os.path.exists(selected_filename_tcx):
+                                            mqtt.export_file(selected_filename_tcx)
                                         mqtt.disconnect()
                                     
                                 elif value == "USB":
