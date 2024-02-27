@@ -7,12 +7,12 @@ import time
 class MQTT_Exporter:
 
     def __init__(self) -> None:
-        self.broker = "broker.emqx.io"
+        self.broker = "broker.hivemq.com"  #"broker.emqx.io"
         self.port = 1883
         self.username = None
         self.password = None
         self.qos = 1
-        self.data_block_size=2000
+        self.data_block_size = 100000 ## 100 kBytes
         self.client_id = "TrainerControler"
         self.pub_ack = False
         self.topic = "TrainerControler/MQTT_export"
@@ -22,7 +22,7 @@ class MQTT_Exporter:
         
         # Set Connecting Client ID
         self.client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, self.client_id)
-        
+        print("A")
         if self.username is not None and self.password is not None:
             self.client.username_pw_set(self.username, self.password)
 
@@ -30,6 +30,7 @@ class MQTT_Exporter:
         self.client.on_publish = self.on_publish
         self.client.connect(self.broker, self.port)
         self.client.loop_start()
+        time.sleep(0.5)
         if self.client.is_connected():
             time.sleep(0.5)
             return True
@@ -53,7 +54,7 @@ class MQTT_Exporter:
 
     def mqtt_publish(self, message: str) -> bool:
 
-        result, mid = self.client.publish(self.topic, message, self.qos)    #### mid = message id
+        result, mid = self.client.publish(topic=self.topic, payload=message, qos=self.qos)    #### mid = message id
         
         if result == 0:
             t1 = time.time()
@@ -82,20 +83,19 @@ class MQTT_Exporter:
         self.client.on_message = callback
 
 
-    def send_header(self, filename):
-        file_data = {"filename": filename}
-        file_data_json = json.dumps(file_data)
-        header = "header" + ",," + file_data_json + ",,"
-        header = bytearray(header, "utf-8")
-        header.extend(b',' * (200 - len(header)))
-        self.mqtt_publish(header)
-
-
     def export_file(self, filename: str) -> None:
         with open(filename, "rb") as file:
 
             print("Publishing")
-            self.send_header(filename)
+
+            file_params = filename.split("/")
+            user = file_params[len(file_params)-2]
+            file_type = ".csv" if file_params[len(file_params)-1].endswith(".csv") else ".tcx"
+            file_name = file_params[len(file_params)-1].removesuffix(file_type)
+            header = json.dumps({"Type": "Header", "User": user, "Filename": file_name, "Filetype": file_type})
+            
+            self.mqtt_publish(header)
+            
             out_hash_md5 = hashlib.md5()
             bytes_out=0
 
@@ -105,11 +105,12 @@ class MQTT_Exporter:
                     out_hash_md5.update(chunk)
                     bytes_out = bytes_out+len(chunk)
                     self.mqtt_publish(chunk)
+                    #print(bytes_out)
        
                 else:
-                    end="end" + ",," + filename + ",," + out_hash_md5.hexdigest()
-                    end=bytearray(end, "utf-8")
-                    end.extend(b'x' * (200 - len(end)))
+
+                    end = json.dumps({"Type": "End", "User": user, "Filename": file_name, "Filetype": file_type, "MD5": out_hash_md5.hexdigest()})
                     self.mqtt_publish(end)
+                    
                     break
 

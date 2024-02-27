@@ -708,16 +708,17 @@ class Supervisor:
         async def processTouch(value) -> bool:
 
             async def copy_file_to_USB() -> None:
-                if "sda1" in os.listdir("/dev/"):
+                if "sda" in os.listdir("/dev/"):
                     if not os.path.isdir(self.USBPATH):
                         os.system("sudo mkdir " + self.USBPATH)
                     if not os.path.ismount(self.USBPATH):
-                        os.system("sudo mount /dev/sda1 " + self.USBPATH)
-                
-                    shutil.copy2(self.selected_filename, self.USBPATH)
+                        os.system("sudo mount /dev/sda " + self.USBPATH+ " -o umask=000")
+                    file_params = self.selected_filename.split("/")
+                    file_name = file_params[len(file_params)-1].removesuffix(".csv")
+                    shutil.copyfile(self.selected_filename, self.USBPATH + "/" + file_name + ".csv")
                     selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
                     if os.path.exists(selected_filename_tcx):
-                        shutil.copy2(selected_filename_tcx, self.USBPATH)
+                        shutil.copyfile(selected_filename_tcx, self.USBPATH + "/" + file_name + ".tcx")
                     
                 else:
                     lcd.drawMessageBox("No USB detected!", ("OK", ))
@@ -764,8 +765,8 @@ class Supervisor:
                     if self.selected_export_method == "MQTT":
                         mqtt.disconnect()
                     
-                    if self.selected_export_method == "USB":
-                        os.system("sudo umount " + self.USBPATH)
+                    if self.selected_export_method == "USB" and os.path.ismount(self.USBPATH):
+                            os.system("sudo umount " + self.USBPATH)
                     
                     lcd.drawMessageBox("Export completed", ("OK",))
                     await asyncio.sleep(4)
@@ -821,7 +822,8 @@ class Supervisor:
                                     
                                 elif value == "USB":
                                     await copy_file_to_USB()
-                                    os.system("sudo umount " + self.USBPATH)
+                                    if os.path.ismount(self.USBPATH):
+                                        os.system("sudo umount " + self.USBPATH)
 
                                 return True
 
