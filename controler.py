@@ -4,6 +4,7 @@ logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 import asyncio, configparser, queue, os, csv
 import time
+import shutil
 from   workouts    import WorkoutManager
 from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
@@ -87,6 +88,7 @@ class Supervisor:
         self.state: str = "UserChange"
         self.activeUserID = 0
         self.sleepDuration = 0.02
+        self.USBPATH = "/media/usb"
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -713,10 +715,29 @@ class Supervisor:
         self.plottable_data = ("HR BPM", "Cadence", "Speed", "Power", "Gradient")
         self.selected_chart = 0
         self.selected_record = 0
+        self.selected_filename = None
+        self.selected_export_method = None
 
         self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
 
         async def processTouch(value) -> bool:
+
+            async def copy_file_to_USB() -> None:
+                if "sda" in os.listdir("/dev/"):
+                    if not os.path.isdir(self.USBPATH):
+                        os.system("sudo mkdir " + self.USBPATH)
+                    if not os.path.ismount(self.USBPATH):
+                        os.system("sudo mount /dev/sda " + self.USBPATH+ " -o umask=000")
+                    file_params = self.selected_filename.split("/")
+                    file_name = file_params[len(file_params)-1].removesuffix(".csv")
+                    shutil.copyfile(self.selected_filename, self.USBPATH + "/" + file_name + ".csv")
+                    selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                    if os.path.exists(selected_filename_tcx):
+                        shutil.copyfile(selected_filename_tcx, self.USBPATH + "/" + file_name + ".tcx")
+                    
+                else:
+                    lcd.drawMessageBox("No USB detected!", ("OK", ))
+                    await asyncio.sleep(4)
 
             if value == "MainMenu":
                 self.state = "MainMenu"
@@ -726,14 +747,56 @@ class Supervisor:
             elif value == "Previous": 
                 self.last_item = max(0, self.last_item-1)
             elif value == "Export":
-                pass
+                self.touchActiveRegions = lcd.drawMessageBox("Export all workouts?", ("Garmin", "MQTT", "USB", "Cancel"))
+                
+                async def process_touch_export_options(value) -> bool:
+                    self.selected_export_method = value
+                    return True
+                
+                await self.touchTester(process_touch_export_options)
+
+                if self.selected_export_method != "Cancel":
+                    if self.selected_export_method == "MQTT":
+                        mqtt.connect()
+                    
+                    for fi in self.workout_history_list:
+
+                        self.selected_filename = fi["Filename"]
+                        if self.selected_export_method == "Garmin":
+                            pass
+
+                        elif self.selected_export_method == "MQTT":
+                            if mqtt.client.is_connected():
+                                mqtt.export_file(self.selected_filename)
+                                selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                                if os.path.exists(selected_filename_tcx):
+                                    mqtt.export_file(selected_filename_tcx)
+
+                        elif self.selected_export_method == "USB":
+                            await copy_file_to_USB()
+
+                        await asyncio.sleep(1)
+                    
+                    if self.selected_export_method == "MQTT":
+                        mqtt.disconnect()
+                    
+                    if self.selected_export_method == "USB" and os.path.ismount(self.USBPATH):
+                            os.system("sudo umount " + self.USBPATH)
+                    
+                    lcd.drawMessageBox("Export completed", ("OK",))
+                    await asyncio.sleep(4)
+
+
+
             else:   ## go to detailed view state
                 data_lines = list()
                 try:
-                    with open(self.workout_history_list[value]["Filename"]) as file:
+                    self.selected_filename = self.workout_history_list[value]["Filename"]
+                    with open(self.selected_filename) as file:
                         all_lines = file.readlines()
                         first_data_line = -1
                         last_data_line = -1
+ 
                         for line_number, line in enumerate(all_lines):
                             if line.startswith("Time,Cadence"):
                                 first_data_line = line_number + 1
@@ -747,7 +810,7 @@ class Supervisor:
 
                     chart1 = self.plottable_data[self.selected_chart]
                     chart2 = self.plottable_data[(self.selected_chart + 1) % len(self.plottable_data)]
-                    
+
                     self.selected_record = value
                     self.touchActiveRegions = lcd.draw_page_historical_record_details(self.workout_history_list[self.selected_record], data, chart1, chart2)
                     
@@ -755,6 +818,35 @@ class Supervisor:
                         
                         if value == "Back":
                             return True
+                        elif value == "Export":
+                            self.touchActiveRegions = lcd.drawMessageBox("Export workout?", ("Garmin", "MQTT", "USB", "Cancel"))
+
+                            async def process_touch_export_options(value) -> bool:
+                                if value == "Cancel":
+                                    return True
+                                elif value == "Garmin":
+                                    return True
+                                elif value == "MQTT":
+                                    mqtt.connect()
+                                    if mqtt.client.is_connected():
+                                        mqtt.export_file(self.selected_filename)
+                                        selected_filename_tcx = self.selected_filename.removesuffix(".csv") + ".tcx"
+                                        if os.path.exists(selected_filename_tcx):
+                                            mqtt.export_file(selected_filename_tcx)
+                                        mqtt.disconnect()
+                                    
+                                elif value == "USB":
+                                    await copy_file_to_USB()
+                                    if os.path.ismount(self.USBPATH):
+                                        os.system("sudo umount " + self.USBPATH)
+                                
+                                lcd.drawMessageBox("Export completed", ("OK",))
+                                await asyncio.sleep(4)
+                                return True
+
+                            
+                            await self.touchTester(process_touch_export_options)
+
                         elif value == "Next":
                             self.selected_chart = (self.selected_chart+1) % len(self.plottable_data)
                         elif value == "Previous":
@@ -770,6 +862,7 @@ class Supervisor:
 
                 except:
                     lcd.drawMessageBox("Error accesing file!", ("OK", ))
+                    await asyncio.sleep(3)
             
             self.touchActiveRegions = lcd.drawPageHistory(self.workout_history_list, self.last_item)
             return False

@@ -361,7 +361,14 @@ class ScreenManager:
         draw.text(xy=button_centre, text="Main Menu", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
         touchActiveRegions += ((button_mainMenu_xy, "MainMenu"),)
 
-        
+        button_export_xy = (self.WIDTH - self.MARGIN_SMALL - int(font.getlength("Export")) - 4, self.MARGIN_SMALL,
+                            self.WIDTH - self.MARGIN_SMALL, self.MARGIN_SMALL+16)
+        button_export_centre = ((button_export_xy[2]+button_export_xy[0])/2, (button_export_xy[3]+button_export_xy[1])/2)
+        draw.rounded_rectangle(xy=button_export_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_export_centre, text="Export", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_export_xy, "Export"),)
+
+
         no_boxes = 3
         Y_Pos = 30
         box_height = 60
@@ -528,6 +535,13 @@ class ScreenManager:
         draw.rounded_rectangle(xy=button_mainMenu_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
         draw.text(xy=button_centre, text="Back", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
         touchActiveRegions += ((button_mainMenu_xy, "Back"),)
+
+        button_export_xy = (self.WIDTH - 2 - int(font.getlength("Export"))-12, 2, self.WIDTH-2, 2+16)
+        button_export_centre = ((button_export_xy[2]+button_export_xy[0])/2, (button_export_xy[3]+button_export_xy[1])/2)
+        draw.rounded_rectangle(xy=button_export_xy, radius=3, fill=self.COLOUR_BG_LIGHT, outline=self.COLOUR_OUTLINE)
+        draw.text(xy=button_export_centre, text="Export", anchor="mm", font=font, fill=self.COLOUR_TEXT_LIGHT, align="center")
+        touchActiveRegions += ((button_export_xy, "Export"),)
+
         
         font = ImageFont.truetype(font=self.font_name, size=16)
         Y_Pos = 2
@@ -935,11 +949,11 @@ class ScreenManager:
         touchActiveRegions = tuple()
         
         numberOfButtons = len(options)
-        buttonLength = int(max(max([draw.textlength(opt, font=font) for opt in options]), font.getlength(message)) + 4)
+        buttonLength = int(max([font.getlength(opt) for opt in options])) + 4
         buttonHeight = 16
         marginLength = 8
 
-        messageWidth = numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1)
+        messageWidth = max(numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1), font.getlength(message) + 4)
         messageHeight = 50
 
         box_xy = (self.WIDTH/2-messageWidth/2, self.HEIGHT/2,
