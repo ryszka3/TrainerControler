@@ -808,9 +808,9 @@ class Supervisor:
 
                             async def process_touch_export_options(value) -> bool:
                                 if value == "Cancel":
-                                    pass
+                                    return True
                                 elif value == "Garmin":
-                                    pass
+                                    return True
                                 elif value == "MQTT":
                                     mqtt.connect()
                                     if mqtt.client.is_connected():
@@ -824,7 +824,9 @@ class Supervisor:
                                     await copy_file_to_USB()
                                     if os.path.ismount(self.USBPATH):
                                         os.system("sudo umount " + self.USBPATH)
-
+                                
+                                lcd.drawMessageBox("Export completed", ("OK",))
+                                await asyncio.sleep(4)
                                 return True
 
                             

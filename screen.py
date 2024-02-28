@@ -949,11 +949,11 @@ class ScreenManager:
         touchActiveRegions = tuple()
         
         numberOfButtons = len(options)
-        buttonLength = int(max(max([draw.textlength(opt, font=font) for opt in options]), font.getlength(message)) + 4)
+        buttonLength = int(max([font.getlength(opt) for opt in options])) + 4
         buttonHeight = 16
         marginLength = 8
 
-        messageWidth = numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1)
+        messageWidth = max(numberOfButtons * buttonLength + marginLength * (numberOfButtons + 1), font.getlength(message) + 4)
         messageHeight = 50
 
         box_xy = (self.WIDTH/2-messageWidth/2, self.HEIGHT/2,

@@ -65,6 +65,8 @@ class MQTT_Exporter:
                         if self.mid_value == mid:
                             self.pub_ack = False
                             return True
+                        else:
+                            return False
                 if time.time() - t1 > 10:   #### timeout
                     return False
 
@@ -83,7 +85,7 @@ class MQTT_Exporter:
         self.client.on_message = callback
 
 
-    def export_file(self, filename: str) -> None:
+    def export_file(self, filename: str) -> bool:
         with open(filename, "rb") as file:
 
             print("Publishing")
@@ -94,23 +96,23 @@ class MQTT_Exporter:
             file_name = file_params[len(file_params)-1].removesuffix(file_type)
             header = json.dumps({"Type": "Header", "User": user, "Filename": file_name, "Filetype": file_type})
             
-            self.mqtt_publish(header)
-            
+            res = self.mqtt_publish(header)
+
             out_hash_md5 = hashlib.md5()
             bytes_out=0
 
-            while True:
+            while True and res:
                 chunk = file.read(self.data_block_size)
                 if chunk:
                     out_hash_md5.update(chunk)
                     bytes_out = bytes_out+len(chunk)
-                    self.mqtt_publish(chunk)
+                    res = self.mqtt_publish(chunk)
                     #print(bytes_out)
        
                 else:
-
                     end = json.dumps({"Type": "End", "User": user, "Filename": file_name, "Filetype": file_type, "MD5": out_hash_md5.hexdigest()})
-                    self.mqtt_publish(end)
-                    
+                    res = self.mqtt_publish(end)
                     break
+
+            return res
 
