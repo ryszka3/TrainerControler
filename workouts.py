@@ -138,6 +138,7 @@ class WorkoutManager():
         self.TCX_Object: TCXWriter = None
         self.buzzer = Buzzer(16)
         self.multiplier:float = 100
+        self.current_segment_id = 0
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -172,6 +173,7 @@ class WorkoutManager():
                             self.dataContainer.distance = 0
                             self.dataContainer.totalEnergy = 0
                             self.state = "WARMUP-PROGRAM"
+                            self.current_segment_id = 0
                         
                         elif entry.type == "Freeride":
                             self.state = "WARMUP-FREERIDE"
@@ -264,7 +266,10 @@ class WorkoutManager():
                         TurboTrainer.setTarget("Level", entry.data)
 
                     elif entry.type == "Multiplier":
-                        self.multiplier = entry.data
+                        
+                        modifier = 10 if entry.data == "Increase" else -10
+                        self.multiplier = min(max(self.multiplier + modifier, 40),300)
+                        
                         TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
                                                self.dataContainer.currentSegment.setting * self.multiplier / 100)
                 
@@ -283,6 +288,7 @@ class WorkoutManager():
                         if len(self.currentWorkout.segments) > 0:
                             
                             self.dataContainer.currentSegment: WorkoutSegment = self.currentWorkout.segments.pop(0)
+                            self.current_segment_id += 1
                             self.dataContainer.currentSegment.startTime = time.time()
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
                                                    self.dataContainer.currentSegment.setting * self.multiplier / 100)

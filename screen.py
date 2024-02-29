@@ -1143,7 +1143,8 @@ class ScreenManager:
                           bgColour: tuple, 
                           segmentsColour: tuple, 
                           selectionColour: tuple = None, 
-                          selectedSegment: int = None) -> tuple:
+                          selectedSegment: int = None,
+                          segment_completion = None) -> tuple:
         
         image = Image.new('RGB', (chartWidth, chartHeight), bgColour)
         draw = ImageDraw.Draw(image)
@@ -1181,6 +1182,11 @@ class ScreenManager:
             segment_xy = (chartXPos, chartHeight-segment_wh[1], chartXPos + segment_wh[0], chartHeight)
             
             draw.rectangle(xy=segment_xy, fill=colour)
+            if selectedSegment == counter and segment_completion is not None:
+                draw.line(xy=(int(chartXPos + segment_completion * segment_wh[0]), chartHeight-segment_wh[1],
+                              int(chartXPos + segment_completion * segment_wh[0]), chartHeight),
+                              width=1, colour = self.COLOUR_CLIMBER)
+
             touchActiveRegions += ((segment_xy, counter),)
 
             chartXPos += segment_wh[0] + 2
@@ -1211,16 +1217,22 @@ class ScreenManager:
         self.display.display()
         #self.im.show()
 
-    def drawPageWorkout(self, workoutType:str, workoutState: str) -> tuple:
+    def calculate_centre_xy(self, xy:tuple) -> tuple:
+        return ((xy[2] + xy[0])/2, (xy[3] + xy[1])/2)
+
+
+    def drawPageWorkout(self, workoutType:str, workoutState: str, 
+                        workoutParams: WorkoutParameters, multiplier: int, selectedSegment:int = None) -> tuple:
 
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
+        #self.im = Image.new("RGB", (320,240), self.COLOUR_BG)
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
 
         X_POS_END: int = 180
         LINE_THICKNESS: int = 2
-        Y_POS_SECTIONS = self.HEIGHT / 4    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
+        Y_POS_SECTIONS = int(self.HEIGHT / 4)    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
 
         noBoxes = 3
         box_width = (self.WIDTH - self.MARGIN_LARGE * (noBoxes+1))/noBoxes
@@ -1228,24 +1240,21 @@ class ScreenManager:
 
         box_Labels = (("Elapsed Time:", formatTime(self.dataContainer.workoutTime), 
                                         formatTime(self.dataContainer.currentSegment.elapsedTime)),
-                      (workoutType,),
-                      ("Remaining Time:", formatTime(self.dataContainer.workoutDuration - self.dataContainer.workoutTime),
-                                          formatTime(self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
-                     )
+                        (workoutType,),
+                        ("Remaining Time:", formatTime(self.dataContainer.workoutDuration - self.dataContainer.workoutTime),
+                                            formatTime(self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime))
+                        )
         
         for i in range(noBoxes):
-            box_xy = ((self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), 0),
-                      (self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE) + box_width, self.MARGIN_SMALL+box_height))
+            box_xy = (self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE), 0,
+                    self.MARGIN_LARGE + i * (box_width + self.MARGIN_LARGE) + box_width, self.MARGIN_SMALL+box_height)
             
-            box_centre_xy = (box_xy[0][0] + box_width / 2, box_xy[0][1] + box_height / 2)
+            box_centre_xy = self.calculate_centre_xy(box_xy)
             
             font = ImageFont.truetype(font=self.font_name, size=12)
             
-            draw.text(xy = (box_centre_xy[0], box_xy[0][1]+3),
-                    text = box_Labels[i][0], # Box title
-                    fill = self.COLOUR_TEXT_LIGHT,
-                    font = font,
-                    anchor="mt")
+            draw.text(xy = (box_centre_xy[0], box_xy[1]+3), text = box_Labels[i][0], # Box title
+                    fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mt")
             
             if i == 1:  # central box, 
                 
@@ -1254,36 +1263,36 @@ class ScreenManager:
                 else:
                     button_label = "Resume" 
                 
-                button_dims = (38, 20)
+                button_dims = (font.getlength(button_label)+4, 20)
                 button_x_separation = 14
                 
                 button_xy = ((self.WIDTH / 2 - button_dims[0] - button_x_separation/2), (Y_POS_SECTIONS - button_dims[1]) / 2 + 8,
-                             (self.WIDTH / 2 - button_x_separation/2), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
+                            (self.WIDTH / 2 - button_x_separation/2), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
                                         
-                button_centre = ((button_xy[2] + button_xy[0])/2, (button_xy[3] + button_xy[1])/2)
+                button_centre = self.calculate_centre_xy(button_xy)
                 draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON, 
-                                       outline = self.COLOUR_BUTTON, width = 2)
-                draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
-                touchActiveRegions += ((button_xy, "Pause"),)
+                                        outline = self.COLOUR_BUTTON, width = 2)
+                draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_TEXT_DARK, font = font, anchor="mm")
+                touchActiveRegions += ((button_xy, button_label),)
 
 
                 button_xy = ((self.WIDTH / 2 + button_x_separation/2), (Y_POS_SECTIONS - button_dims[1]) / 2 + 8,
-                             (self.WIDTH / 2 + button_x_separation/2 + button_dims[0]), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
+                                (self.WIDTH / 2 + button_x_separation/2 + button_dims[0]), (Y_POS_SECTIONS + button_dims[1]) / 2 + 8)
                 
-                button_centre = ((button_xy[2] + button_xy[0])/2, (button_xy[3] + button_xy[1])/2)
+                button_centre = self.calculate_centre_xy(button_xy)
 
                 draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON,
                                         outline = self.COLOUR_BUTTON, width = 2)
                 
                 touchActiveRegions += ((button_xy, "End"),)
-                draw.text(xy = button_centre, text = "End", fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
+                draw.text(xy = button_centre, text = "End", fill = self.COLOUR_TEXT_DARK, font = font, anchor="mm")
 
                 # no extra info to print, skip the rest of the iteration
                 continue
 
             font = ImageFont.truetype(font=self.font_name, size=11)
 
-            valuesOffset = max(font.getlength("Segment:"), font.getlength("Total:")) + font.getlength("  ")
+            valuesOffset = max([font.getlength(opt) for opt in ("Segment:", "Total:", "  ")]) + 6
 
             draw.text(xy = (box_centre_xy[0] - box_width / 2 , box_centre_xy[1]+8), 
                     text = "Total:", # total
@@ -1311,65 +1320,53 @@ class ScreenManager:
 
         Y_Pos: int = Y_POS_SECTIONS
 
-        section1: dict = {"Section": "Speed", "labels": {
-                    "km/h": str(round(self.dataContainer.momentary.speed,1)), 
+        section1: dict = {"Section": "Speed", "Unit": "km/h", 
+                    "Value": str(round(self.dataContainer.momentary.speed,1)), 
                     "Average":str(round(self.dataContainer.average.speed,1)), 
-                    "Max":str(round(self.dataContainer.max.speed,1))}}
+                    "Max":str(round(self.dataContainer.max.speed,1))}
         
-        section2: dict = {"Section": "Power", "labels": {
-                    "W": str(round(self.dataContainer.momentary.power,0)), 
+        section2: dict = {"Section": "Power", "Unit": "W", 
+                    "Value": str(round(self.dataContainer.momentary.power,0)), 
                     "Average":str(round(self.dataContainer.average.power,0)), 
-                    "Max":str(round(self.dataContainer.max.power,0))}}
+                    "Max":str(round(self.dataContainer.max.power,0))}
         
-        section3: dict = {"Section": "Cadence", "labels": {
-                    "RPM": str(round(self.dataContainer.momentary.cadence,1)), 
+        section3: dict = {"Section": "Cadence", "Unit": "RPM", 
+                    "Value": str(round(self.dataContainer.momentary.cadence,1)), 
                     "Average":str(round(self.dataContainer.average.cadence,1)), 
-                    "Max":str(round(self.dataContainer.max.cadence,1))}}
+                    "Max":str(round(self.dataContainer.max.cadence,1))}
         
-        section4: dict = {"Section": "Heart Rate", "labels": {
-                    "BPM": str(round(self.dataContainer.momentary.heartRate,0)), 
+        section4: dict = {"Section": "Heart\nRate", "Unit": "BPM\n", 
+                    "Value": str(round(self.dataContainer.momentary.heartRate,0)), 
                     "Average":str(round(self.dataContainer.average.heartRate,0)), 
                     "Max":str(round(self.dataContainer.max.heartRate,0)),
-                    "Zone": self.dataContainer.momentary.hrZone}}
+                    "Zone": self.dataContainer.momentary.hrZone}
 
         all_sections: tuple = (section1, section2, section3, section4)
         section_height = self.HEIGHT * 3 / 4 / len(all_sections)
 
+        draw.rounded_rectangle(xy= (0, Y_Pos, 204, self.HEIGHT), radius=8, fill=self.COLOUR_BG_LIGHT)
         for section in all_sections:
             
-            X_Pos: int = self.MARGIN_LARGE + 100
+            X_Pos: int = self.MARGIN_SMALL*2
 
-            draw.line(xy  = (self.MARGIN_LARGE, Y_Pos, self.WIDTH - self.MARGIN_LARGE , Y_Pos), 
-                    fill  = self.COLOUR_OUTLINE, 
-                    width = LINE_THICKNESS)
-            
             font = ImageFont.truetype(font=self.font_name, size=11)
 
-            draw.text(xy = (self.MARGIN_LARGE+15, Y_Pos + section_height / 2),
-                    text = section["Section"],
-                    fill = self.COLOUR_TEXT_LIGHT,
-                    font = font,
-                    anchor="lm")
+            draw.text(xy = (X_Pos, Y_Pos + section_height / 2), text = section["Section"],
+                    fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="lm", align="center")
             
-            X_Pos += 20
-            for key in section["labels"]:
-
-                spacing = ((X_POS_END - self.MARGIN_LARGE) - self.MARGIN_LARGE) / (len(all_sections) - 1)
-
-                font = ImageFont.truetype(font=self.font_name, size=8)
-                draw.text(xy = (X_Pos, Y_Pos+35),
-                        text = key,
-                        fill = self.COLOUR_TEXT_LIGHT,
-                        font = font,
-                        anchor="mm")
-                
-                font_size = 16
+            font = ImageFont.truetype(font=self.font_name, size=10)
+            X_Pos += 90
+            draw.text(xy = (X_Pos, Y_Pos + section_height / 2), text = section["Unit"], 
+                    fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
+            
+            if "Zone" in section:
+                font_size = 12
                 font = ImageFont.truetype(font=self.font_name, size=font_size)
-                while font.getlength(str(section["labels"][key])) > spacing - 4:
+                while font.getlength(str(section["Value"])) > 40:
                     font_size -= 1
                     font = ImageFont.truetype(font=self.font_name, size=font_size)
-               
-                value = str(section["labels"][key])
+
+                value = str(section["Zone"])
                 if value ==  "Recovery":
                     colour = self.COLOUR_CLIMBER
                 elif value == "Aerobic":
@@ -1382,15 +1379,62 @@ class ScreenManager:
                     colour = self.COLOUR_HEART
                 else:
                     colour = self.COLOUR_TEXT_LIGHT
+            
+                draw.text(xy = (X_Pos, Y_Pos + section_height / 4 *2.8), text = value, fill = colour, font = font, anchor="mm")
                 
-                draw.text(xy = (X_Pos, Y_Pos+15), text = value, fill = colour, font = font, anchor="mm")
+            font = ImageFont.truetype(font=self.font_name, size=16)
+            X_Pos += 60
+            draw.text(xy = (X_Pos, Y_Pos+15), text = section["Value"], fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
 
-                # calculate spacing accordinly:
-                X_Pos += spacing
+            font = ImageFont.truetype(font=self.font_name, size=8)
+            draw.text(xy = (X_Pos, Y_Pos+section_height / 4 * 3), text = "A: "+section["Average"]+" M: "+section["Max"], 
+                    fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="mm")
+
+            
             
             Y_Pos += section_height
+            draw.line(xy = (self.MARGIN_SMALL, Y_Pos, 204-self.MARGIN_SMALL, Y_Pos), fill  = self.COLOUR_OUTLINE, width = LINE_THICKNESS)
+
+        Y_Pos = Y_POS_SECTIONS
+        X_Pos = 204 + self.MARGIN_SMALL
+        draw.rounded_rectangle(xy= (X_Pos, Y_Pos, self.WIDTH, self.HEIGHT), radius=8, fill=self.COLOUR_BG_LIGHT)
+
+
+        if workoutType == "Program":
+            Y_Pos += 6
+            box_centre_x = (X_Pos+self.WIDTH)/2
+            font = ImageFont.truetype(font=self.font_name, size=12)
+            draw.text(xy = (box_centre_x, Y_Pos), text = "Difficulty\nControl", align="center", 
+                    fill = self.COLOUR_TEXT_LIGHT, font = font, anchor="ma")
+            
+            Y_Pos += 40
+            arrow_w = 6
+            arrow_h = 16
+            draw.polygon(xy=(box_centre_x, Y_Pos, box_centre_x-arrow_w, Y_Pos+arrow_h, box_centre_x+arrow_w, Y_Pos+arrow_h), fill=self.COLOUR_BUTTON)
+            arrow_box = (box_centre_x-2*arrow_w, Y_Pos-20, box_centre_x+2*arrow_w, Y_Pos+arrow_h)
+            touchActiveRegions += ((arrow_box, "Increase"),)
+            
+            Y_Pos += 30
+            font = ImageFont.truetype(font=self.font_name, size=14)
+            draw.text(xy=(box_centre_x, Y_Pos), text=str(multiplier)+"%", fill=self.COLOUR_OUTLINE, anchor="mm", font=font)
+            Y_Pos += 16
+            draw.polygon(xy=(box_centre_x-arrow_w, Y_Pos, box_centre_x+arrow_w, Y_Pos, box_centre_x, Y_Pos+arrow_h), fill=self.COLOUR_BUTTON)
+            arrow_box = (box_centre_x-2*arrow_w, Y_Pos, box_centre_x+2*arrow_w, Y_Pos+arrow_h+20)
+            touchActiveRegions += ((arrow_box, "Decrease"),)
+            
+            chart_w = 98
+            chart_h = 50
+            segment_completed_ratio = self.dataContainer.currentSegment.elapsedTime / self.dataContainer.currentSegment.duration
+            segments_chart, touchBoxes = self.drawSegmentsChart(chart_w, chart_h, workoutParams, self.COLOUR_BG_LIGHT, self.COLOUR_TEXT_LIGHT,
+                                                                self.COLOUR_OUTLINE, selectedSegment, segment_completed_ratio)
+                                                    
+            self.display.buffer.paste(segments_chart, (204 + 2 * self.MARGIN_SMALL, self.HEIGHT - self.MARGIN_SMALL - chart_h ))
+
+        elif workoutType == "Freeride":
+            pass
 
         self.display.display()
+        #self.im.show()
         return touchActiveRegions
     
 
