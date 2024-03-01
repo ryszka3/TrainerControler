@@ -798,7 +798,7 @@ class Supervisor:
                         last_data_line = -1
  
                         for line_number, line in enumerate(all_lines):
-                            if line.startswith("Time,Cadence"):
+                            if line.startswith("T,Cadence"):
                                 first_data_line = line_number + 1
                             if line.startswith("AVERAGE:,"):
                                 last_data_line = line_number

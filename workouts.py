@@ -316,7 +316,7 @@ class WorkoutManager():
                 
                 ##### reset variables and the state machine #####
                 self.currentWorkout = None
-                self.dataContainer.workoutTime = 0
+                
                 self.dataContainer.currentSegment = WorkoutSegment("Power", 0, 100)
                 self.dataContainer.workoutDuration = 0
 
@@ -353,6 +353,8 @@ class WorkoutManager():
                     if entry.type in ("SAVE", "DISCARD"):   ## Common to both save and discard
                         self.TCX_Object = None
                         self.state = "IDLE"
+                        
+                    self.dataContainer.workoutTime = 0
                 await asyncio.sleep(0.05)
 
         else:
