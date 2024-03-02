@@ -212,7 +212,7 @@ class WorkoutManager():
                                                     "at:",
                                                     datetime.datetime.now().strftime("%X")                                                
                                                     )))
-                            csvWriter.writerow(["Type", "Program" if entry.type == "Start" else "Freeride", 
+                            csvWriter.writerow(["Type:", "Program" if entry.type == "Start" else "Freeride", 
                                                 self.currentWorkout.name if entry.type == "Start" else ""])
                             csvWriter.writerow(CSV_headers)
                             print("Workout data file (CSV) created")
