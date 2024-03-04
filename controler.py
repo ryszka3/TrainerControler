@@ -476,7 +476,7 @@ class Supervisor:
         print("Program execution loop, workout manager state: ", workoutManager.state)
 
         while workoutManager.state != "END":
-            lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
+            self.touchActiveRegions = lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
                                 workoutManager.multiplier, workoutManager.current_segment_id)
             await self.touchTester(processTouch, 0.25)
             await asyncio.sleep(self.sleepDuration)

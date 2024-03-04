@@ -1185,7 +1185,7 @@ class ScreenManager:
             if selectedSegment == counter and segment_completion is not None:
                 draw.line(xy=(int(chartXPos + segment_completion * segment_wh[0]), chartHeight-segment_wh[1],
                               int(chartXPos + segment_completion * segment_wh[0]), chartHeight),
-                              width=1, colour = self.COLOUR_CLIMBER)
+                              width=1, fill= self.COLOUR_CLIMBER)
 
             touchActiveRegions += ((segment_xy, counter),)
 
@@ -1272,7 +1272,7 @@ class ScreenManager:
                 button_centre = self.calculate_centre_xy(button_xy)
                 draw.rounded_rectangle(xy = button_xy, radius = 3, fill = self.COLOUR_BUTTON, 
                                         outline = self.COLOUR_BUTTON, width = 2)
-                draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_TEXT_DARK, font = font, anchor="mm")
+                draw.text(xy = button_centre, text = button_label, fill = self.COLOUR_FILL, font = font, anchor="mm")
                 touchActiveRegions += ((button_xy, button_label),)
 
 
@@ -1285,7 +1285,7 @@ class ScreenManager:
                                         outline = self.COLOUR_BUTTON, width = 2)
                 
                 touchActiveRegions += ((button_xy, "End"),)
-                draw.text(xy = button_centre, text = "End", fill = self.COLOUR_TEXT_DARK, font = font, anchor="mm")
+                draw.text(xy = button_centre, text = "End", fill = self.COLOUR_FILL, font = font, anchor="mm")
 
                 # no extra info to print, skip the rest of the iteration
                 continue
@@ -1424,7 +1424,11 @@ class ScreenManager:
             
             chart_w = 98
             chart_h = 50
-            segment_completed_ratio = self.dataContainer.currentSegment.elapsedTime / self.dataContainer.currentSegment.duration
+            try:
+                segment_completed_ratio = self.dataContainer.currentSegment.elapsedTime / self.dataContainer.currentSegment.duration
+            except:
+                segment_completed_ratio = None
+
             segments_chart, touchBoxes = self.drawSegmentsChart(chart_w, chart_h, workoutParams, self.COLOUR_BG_LIGHT, self.COLOUR_TEXT_LIGHT,
                                                                 self.COLOUR_OUTLINE, selectedSegment, segment_completed_ratio)
                                                     

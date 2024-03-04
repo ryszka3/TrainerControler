@@ -173,7 +173,7 @@ class WorkoutManager():
                             self.dataContainer.distance = 0
                             self.dataContainer.totalEnergy = 0
                             self.state = "WARMUP-PROGRAM"
-                            self.current_segment_id = 0
+                            self.current_segment_id = -1
                         
                         elif entry.type == "Freeride":
                             self.state = "WARMUP-FREERIDE"
@@ -271,7 +271,7 @@ class WorkoutManager():
                         self.multiplier = min(max(self.multiplier + modifier, 40),300)
                         
                         TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
-                                               self.dataContainer.currentSegment.setting * self.multiplier / 100)
+                                               int(self.dataContainer.currentSegment.setting * self.multiplier / 100))
                 
                 if self.state == "PROGRAM":
                     isSegmentTransition: bool = True
@@ -291,7 +291,7 @@ class WorkoutManager():
                             self.current_segment_id += 1
                             self.dataContainer.currentSegment.startTime = time.time()
                             TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
-                                                   self.dataContainer.currentSegment.setting * self.multiplier / 100)
+                                                   int(self.dataContainer.currentSegment.setting * self.multiplier / 100))
                             
                             if self.writeToTCX == True:
                                 self.TCX_Object.updateLapValues(self.dataContainer)
