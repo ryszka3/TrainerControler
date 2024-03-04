@@ -89,6 +89,9 @@ class Supervisor:
         self.activeUserID = 0
         self.sleepDuration = 0.02
         self.USBPATH = "/media/usb"
+        self.wifi_ssid: str = None
+        self.wifi_password: str = None
+        self.wifi_status = "Unknown"
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -149,6 +152,18 @@ class Supervisor:
                                                           nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
         
         await self.touchTester(processTouch)
+
+    async def scan_wlan(self) -> list:
+        result = os.popen("sudo iwlist wlan0 scan | grep 'ESSID'")
+        result = list(result)
+
+        if "Device or resource busy" in result:
+                return []
+        else:
+            ssid_list = [item.lstrip() for item in result]
+            ssid_list = [item.removeprefix("ESSID\"") for item in ssid_list]
+            ssid_list = [item.removesuffix("\"\n") for item in ssid_list]
+            return ssid_list
 
     async def stringEdit(self, string:str) -> str:
         print("state: stringEditor method")     
@@ -589,8 +604,57 @@ class Supervisor:
         await self.touchTester(processTouch)
         self.state = "General"
 
+    async def state_settings_wifi(self):
+        print("state: Setting method")
 
+        self.list_of_SSID = await self.scan_wlan()
+        self.last_item = min(len(self.list_of_SSID),4)
+        self.touchActiveRegions = lcd.draw_page_wifi(self.list_of_SSID, self.last_item, self.wifi_ssid, self.wifi_password, self.wifi_status )
+        
+        async def processTouch(value: str) -> bool:
+            if value in ("Save", "Discard"):
+                if value == "Save":
+                    config.set("WIFI", "ssid", self.wifi_ssid)
+                    config.set("WIFI", "password", self.wifi_password)
+                    
+                    with open('config.ini', 'wt') as file:
+                        config.write(file)
+                else:
+                    self.wifi_ssid = config["WIFI"]["ssid"]
+                    self.wifi_password = config["WIFI"]["password"]
+                
+                self.state = "General"
+                return True
+            
+            elif value == "Next":
+                self.last_item = min(self.last_item+1, len(self.list_of_SSID))
 
+            elif value == "Previous":
+                self.last_item = max(self.last_item-1, 4)
+
+            elif value == "SSID":
+                self.wifi_ssid = self.stringEdit(self.wifi_ssid)
+
+            elif value == "Password":
+                self.wifi_password = self.stringEdit(self.wifi_password)
+                
+            elif value == "Connect":
+                try:
+                    os.system("nmcli d wifi connect {} password {}".format(self.wifi_ssid, self.wifi_password))
+                except:
+                    self.wifi_status = "Disconnected"
+                else:
+                    self.wifi_status = "Connected"
+            else:
+                self.wifi_ssid = value
+                
+            self.touchActiveRegions = lcd.draw_page_wifi(self.list_of_SSID, self.last_item, self.wifi_ssid, self.wifi_password, self.wifi_status )
+            return False
+        
+        await self.touchTester(processTouch)
+        
+
+    
     async def state_user_change(self):
         print("state: user change method")
 
@@ -934,6 +998,9 @@ class Supervisor:
             if self.state == "MQTT Settings":
                 await self.state_settings_mqtt()
 
+            if self.state == "WiFi Settings":
+                await self.state_settings_wifi()
+
             if self.state == "UserEdit":
                 await self.state_user_edit()
             
@@ -996,8 +1063,11 @@ try:
 except:
     pass
 
-
-
+try:
+    supervisor.wifi_ssid = config["WIFI"]["ssid"]
+    supervisor.wifi_password = config["WIFI"]["password"]
+except:
+    pass
 
 
 async def main():
