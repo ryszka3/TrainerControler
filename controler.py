@@ -161,7 +161,7 @@ class Supervisor:
                 return []
         else:
             ssid_list = [item.lstrip() for item in result]
-            ssid_list = [item.removeprefix("ESSID\"") for item in ssid_list]
+            ssid_list = [item.removeprefix("ESSID:\"") for item in ssid_list]
             ssid_list = [item.removesuffix("\"\n") for item in ssid_list]
             return ssid_list
 
@@ -633,10 +633,10 @@ class Supervisor:
                 self.last_item = max(self.last_item-1, 4)
 
             elif value == "SSID":
-                self.wifi_ssid = self.stringEdit(self.wifi_ssid)
+                self.wifi_ssid = await self.stringEdit(self.wifi_ssid)
 
             elif value == "Password":
-                self.wifi_password = self.stringEdit(self.wifi_password)
+                self.wifi_password = await self.stringEdit(self.wifi_password)
                 
             elif value == "Connect":
                 try:
@@ -992,7 +992,7 @@ class Supervisor:
                 await self.state_user_change()
 
             if self.state == "General":
-                buttons_screeen_names = ("MQTT Settings",)
+                buttons_screeen_names = ("MQTT Settings","WiFi Settings")
                 await self.state_settings(buttons_screeen_names, None, "Settings")
 
             if self.state == "MQTT Settings":
