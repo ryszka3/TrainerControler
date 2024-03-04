@@ -443,11 +443,14 @@ class Supervisor:
                 device_turboTrainer.unsubscribeFromService(device_turboTrainer.UUID_indoor_bike_data)
                 return True
 
-            elif workoutManager.state in ("PROGRAM", "FREERIDE"):
+            elif value == "Pause":
                 workoutManager.queue.put(QueueEntry("PAUSE", 0))
 
-            else:
+            elif value == "Resume":
                 workoutManager.queue.put(QueueEntry("START", 0))
+
+            elif value in ("Increase", "Decrease"):
+                workoutManager.queue.put(QueueEntry("Multiplier", value))
             
             return False
 
@@ -474,10 +477,10 @@ class Supervisor:
 
         print("Program execution loop, workout manager state: ", workoutManager.state)
 
-        self.touchActiveRegions = lcd.drawPageWorkout("Program", "PROGRAM")
         while workoutManager.state != "END":
+            self.touchActiveRegions = lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
+                                workoutManager.multiplier, workoutManager.current_segment_id)
             await self.touchTester(processTouch, 0.25)
-            lcd.drawPageWorkout("Program", workoutManager.state)
             await asyncio.sleep(self.sleepDuration)
         SAVE_DELAY = 15
         t0 = time.time()    

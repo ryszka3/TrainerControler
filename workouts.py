@@ -137,6 +137,8 @@ class WorkoutManager():
         self.filename = None
         self.TCX_Object: TCXWriter = None
         self.buzzer = Buzzer(16)
+        self.multiplier:float = 100
+        self.current_segment_id = 0
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -171,6 +173,7 @@ class WorkoutManager():
                             self.dataContainer.distance = 0
                             self.dataContainer.totalEnergy = 0
                             self.state = "WARMUP-PROGRAM"
+                            self.current_segment_id = -1
                         
                         elif entry.type == "Freeride":
                             self.state = "WARMUP-FREERIDE"
@@ -229,6 +232,7 @@ class WorkoutManager():
             
             if self.state in ("WARMUP-PROGRAM", "WARMUP-FREERIDE"):
                 
+                self.multiplier = 100
                 await asyncio.sleep(3.0)
                 self.state = self.state.removeprefix("WARMUP-")
                 self.workoutStartTime = time.time()
@@ -260,13 +264,21 @@ class WorkoutManager():
                     elif entry.type == "Set Level":
                         print("Setting level: ", entry.data)
                         TurboTrainer.setTarget("Level", entry.data)
+
+                    elif entry.type == "Multiplier":
+                        
+                        modifier = 10 if entry.data == "Increase" else -10
+                        self.multiplier = min(max(self.multiplier + modifier, 40),300)
+                        
+                        TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
+                                               int(self.dataContainer.currentSegment.setting * self.multiplier / 100))
                 
                 if self.state == "PROGRAM":
                     isSegmentTransition: bool = True
                     try:
                         if self.dataContainer.currentSegment.elapsedTime < self.dataContainer.currentSegment.duration:
                             isSegmentTransition = False
-                        if self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime <= 3 and self.buzzer.busy == False:
+                        if 0 < self.dataContainer.currentSegment.duration - self.dataContainer.currentSegment.elapsedTime <= 3 and self.buzzer.busy == False:
                             beep_task = asyncio.create_task(self.buzzer.beep(3, 0.2, 1))
                             
                     except:
@@ -276,8 +288,10 @@ class WorkoutManager():
                         if len(self.currentWorkout.segments) > 0:
                             
                             self.dataContainer.currentSegment: WorkoutSegment = self.currentWorkout.segments.pop(0)
+                            self.current_segment_id += 1
                             self.dataContainer.currentSegment.startTime = time.time()
-                            TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, self.dataContainer.currentSegment.setting)
+                            TurboTrainer.setTarget(self.dataContainer.currentSegment.segmentType, 
+                                                   int(self.dataContainer.currentSegment.setting * self.multiplier / 100))
                             
                             if self.writeToTCX == True:
                                 self.TCX_Object.updateLapValues(self.dataContainer)
