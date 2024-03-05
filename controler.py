@@ -149,7 +149,11 @@ class Supervisor:
                                                           nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
         
         await self.touchTester(processTouch)
+    
+    def read_battery_SOC() -> int:
 
+        return 100
+    
     async def stringEdit(self, string:str) -> str:
         print("state: stringEditor method")     
         
@@ -293,10 +297,12 @@ class Supervisor:
     async def state_main_menu(self):
         
         print("state: main menu method")
-        self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+        soc = None
+        self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT, soc)
         
         timer_heart   = time.time()
         timer_trainer = time.time()
+        timer_soc     = time.time()
 
         heart_fill_colour = lcd.COLOUR_BG_LIGHT
         trainer_fill_colour = lcd.COLOUR_BG_LIGHT
@@ -325,6 +331,10 @@ class Supervisor:
             else:
                 trainer_fill_colour = lcd.COLOUR_TT
 
+            if time.time() - timer_soc > 15:
+                soc = self.read_battery_SOC()
+                timer_soc = time.time()
+
             async def processTouch(value: str) -> bool:
                 self.state = value
                 return True
@@ -337,7 +347,7 @@ class Supervisor:
                 self.state = "MainMenu"
                 await asyncio.sleep(4.0)
                         
-            lcd.drawPageMainMenu(heart_fill_colour, trainer_fill_colour)
+            lcd.drawPageMainMenu(heart_fill_colour, trainer_fill_colour, soc)
 
             await asyncio.sleep(self.sleepDuration)
     
@@ -476,14 +486,19 @@ class Supervisor:
             return False
 
         print("Program execution loop, workout manager state: ", workoutManager.state)
-
+        t0 = time.time()
+        soc: int = None
         while workoutManager.state != "END":
             self.touchActiveRegions = lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
-                                workoutManager.multiplier, workoutManager.current_segment_id)
+                                workoutManager.multiplier, workoutManager.current_segment_id, soc)
             await self.touchTester(processTouch, 0.25)
+            if time.time() - t0 > 15:
+                soc = self.read_battery_SOC()
+                t0 = time.time()
             await asyncio.sleep(self.sleepDuration)
+        
         SAVE_DELAY = 15
-        t0 = time.time()    
+        t0 = time.time()
         elapsedTime = 0
 
         while True:
