@@ -1858,6 +1858,33 @@ class ScreenManager:
             X_pos -= 1
 
         return image
+    
+    def draw_battery(self, height: int, state_of_charge:int, background_colour: tuple) -> Image.Image:
+        fill_colour = self.COLOUR_CLIMBER if state_of_charge > 50 else self.COLOUR_OUTLINE
+        fill_colour = self.COLOUR_HEART if state_of_charge < 25 else fill_colour
+        
+        ratio = 2   ## width/height
+        width = ratio * height
+        outline_width = max(int(height/8),3)
+        body_width = int(width*12/13)
+        pin_half_height = int(height/3/2)
+        battery = Image.new("RGB", (width,height), background_colour)
+        draw = ImageDraw.Draw(battery)
+        draw.rounded_rectangle(xy=(0,0,body_width, height-1), outline=self.COLOUR_BUTTON, radius=outline_width*2, width=outline_width)
+        draw.rounded_rectangle(xy=(body_width-outline_width+1, int(height/2)-pin_half_height-1, width-1, int(height/2)+pin_half_height),
+                            outline=self.COLOUR_BUTTON, radius=1, width=max(int(outline_width-2),2))
+        gap = max(int(height / 16),1)
+        
+        fill_x_start = outline_width+gap
+        fill_x_end = body_width - outline_width - gap
+        fill_length = int((fill_x_end - fill_x_start) * state_of_charge / 100)
+        fill_x_end = fill_x_start + fill_length
+
+        draw.rounded_rectangle(xy=(fill_x_start, outline_width+gap, fill_x_end, height-outline_width-gap-1), 
+                            fill=fill_colour,radius=outline_width )
+        
+        
+        return battery
 
 if __name__ == "__main__":
 
