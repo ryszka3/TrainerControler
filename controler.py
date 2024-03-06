@@ -152,7 +152,19 @@ class Supervisor:
     
     def read_battery_SOC() -> int:
 
-        return 100
+        # Read ADC (0-1023
+        adc_reading = 800
+        V_DD = 3.3
+        voltage_2 = adc_reading * V_DD / 1023
+
+        RESISTOR_1 = 47
+        RESISTOR_2 = 100
+
+        voltage_battery = voltage_2 * (RESISTOR_1 + RESISTOR_2) / RESISTOR_2
+        
+        soc = 134.15407 * voltage_battery - 456.73415
+
+        return min(int(soc), 100)
     
     async def stringEdit(self, string:str) -> str:
         print("state: stringEditor method")     
