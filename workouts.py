@@ -139,6 +139,7 @@ class WorkoutManager():
         self.buzzer = Buzzer(16)
         self.multiplier:float = 100
         self.current_segment_id = 0
+        self.timer_paused = 0
 
 
     def numberOfWorkoutPrograms(self) -> int:
@@ -243,6 +244,12 @@ class WorkoutManager():
                     if entry.type == "START":   # Resume
                         TurboTrainer.start()
                         self.state = "PROGRAM"
+                        pause_duration = time.time() - self.timer_paused
+                        self.workoutStartTime += pause_duration
+                        self.dataContainer.currentSegment.startTime += pause_duration
+
+                    if entry.type == "STOP":   # Stop the workout, go to STOP to close the datafile
+                        self.state = "STOP"
                 else:
                     await asyncio.sleep(0.1)
 
@@ -256,6 +263,7 @@ class WorkoutManager():
                     elif entry.type == "PAUSE": # Pause the workout, go to PAUSE and await futher instructions
                         TurboTrainer.pause()
                         self.state = "PAUSED-" + self.state
+                        self.timer_paused = time.time()
 
                     elif entry.type == "Set Power":
                         print("Setting power: ", entry.data)
