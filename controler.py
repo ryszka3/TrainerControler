@@ -640,7 +640,7 @@ class Supervisor:
                 
             elif value == "Connect":
                 try:
-                    os.system("nmcli d wifi connect {} password {}".format(self.wifi_ssid, self.wifi_password))
+                    os.system("sudo nmcli d wifi connect {} password {}".format(self.wifi_ssid, self.wifi_password))
                 except:
                     self.wifi_status = "Disconnected"
                 else:
