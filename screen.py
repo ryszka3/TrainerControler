@@ -939,6 +939,117 @@ class ScreenManager:
         return touchActiveRegions
 
 
+    def draw_page_wifi(self, list_of_SSID: list, last_displayed_item: int, SSID: str, password: str, status) -> tuple:
+
+        self.display.clear(self.COLOUR_BG)
+        draw = self.display.draw() # Get a PIL Draw object
+        #self.im = Image.new("RGB", (320,240), self.COLOUR_BG)
+        #draw = ImageDraw.Draw(self.im)
+        touchActiveRegions = tuple()
+
+        font = ImageFont.truetype(font=self.font_name, size=18)
+        draw.text(xy=(self.WIDTH/2, self.MARGIN_LARGE), text="WiFi Settings", font=font, anchor="mm", fill=self.COLOUR_TEXT_LIGHT)
+
+        box_height = 30
+        box_width = 120
+        GAP = 14
+        RADIUS = 8
+        Y_Pos = 45
+        box_setting_x = 180
+        font = ImageFont.truetype(font=self.font_name, size=14)
+        draw.text(xy=(int(self.MARGIN_SMALL + box_width/2), Y_Pos), text="Available:", font=font, anchor="mm", fill=self.COLOUR_OUTLINE)
+        draw.text(xy=(int((box_setting_x + self.WIDTH-self.MARGIN_SMALL)/2), Y_Pos), text="Settings:", font=font, anchor="mm", fill=self.COLOUR_OUTLINE)
+
+        Y_Pos = 60
+        font = ImageFont.truetype(font=self.font_name, size=12)
+        buttons_labels = ("Discard", "Save")
+        buttons_width = max([font.getlength(item) for item in buttons_labels])+6
+        buttons_xpos=(self.MARGIN_SMALL, self.WIDTH-2*self.MARGIN_SMALL-buttons_width)
+        for label, xpos in zip(buttons_labels, buttons_xpos):
+            button_xy = (xpos, self.MARGIN_SMALL, xpos+buttons_width, self.MARGIN_SMALL+18)
+            draw.rounded_rectangle(xy=button_xy, fill=self.COLOUR_BUTTON, radius=3)
+            draw.text(xy=self.calculate_centre_xy(button_xy), text=label, font=font, anchor="mm", fill=self.COLOUR_FILL)
+            touchActiveRegions +=  ((button_xy, label),)
+            
+        if list_of_SSID is not None:
+            if len(list_of_SSID) > 0:
+
+                for dev_id in range(max(last_displayed_item-4, 0), last_displayed_item):
+                    box_xy = (self.MARGIN_SMALL, Y_Pos, self.MARGIN_SMALL+box_width, Y_Pos+box_height)
+                    draw.rounded_rectangle(xy=box_xy, radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+                    
+                    dev_name = (list_of_SSID[dev_id][:14] + "…") if len(list_of_SSID[dev_id]) > 14 else list_of_SSID[dev_id]
+                    draw.text(xy=(self.MARGIN_SMALL+RADIUS*2, Y_Pos+box_height/2), text=dev_name, font=font, anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+
+                    touchActiveRegions +=  ((box_xy, list_of_SSID[dev_id]),)
+                    Y_Pos += box_height + GAP
+
+                Y_Pos = 66
+                arrow_width = 10
+                arrow_height = 15
+                arrow_centre = 4*self.MARGIN_SMALL + box_width + arrow_width
+                
+                if last_displayed_item > 4:
+                    draw.polygon(xy=(arrow_centre, Y_Pos, 
+                                    arrow_centre-arrow_width/2, Y_Pos+arrow_height, 
+                                    arrow_centre+arrow_width/2, Y_Pos+arrow_height),
+                                fill=self.COLOUR_BUTTON)
+                    arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+                    touchActiveRegions += ((arrow_box, "Previous"),)
+                
+
+                Y_Pos += arrow_height + 120
+                if len(list_of_SSID) > last_displayed_item and len(list_of_SSID) > 0:
+                    draw.polygon(xy=(arrow_centre-arrow_width/2, Y_Pos,
+                                    arrow_centre+arrow_width/2, Y_Pos,
+                                    arrow_centre, Y_Pos+ arrow_height),
+                                fill=self.COLOUR_BUTTON)
+                    
+                    arrow_box = (arrow_centre-arrow_width/2, Y_Pos, arrow_centre+arrow_width/2, Y_Pos+arrow_height)
+                    touchActiveRegions += ((arrow_box, "Next"),)
+
+            else:
+                text = "No networks found..."
+                draw.rounded_rectangle(xy=(self.MARGIN_SMALL, Y_Pos, int(2*self.MARGIN_SMALL+font.getlength(text)+RADIUS*2), 
+                                        Y_Pos+box_height), radius=RADIUS, fill=self.COLOUR_BG_LIGHT)
+                draw.text(xy=(self.MARGIN_SMALL+RADIUS*2, Y_Pos+box_height/2), text=text, font=font, 
+                        anchor="lm", fill=self.COLOUR_TEXT_LIGHT)
+
+        Y_Pos = 60
+
+        draw.rounded_rectangle(xy=(box_setting_x, Y_Pos, self.WIDTH-self.MARGIN_SMALL, self.HEIGHT-self.MARGIN_SMALL),
+                            fill=self.COLOUR_BG_LIGHT, radius=RADIUS)
+        Y_Pos += 10
+        X_Pos = box_setting_x + self.MARGIN_SMALL
+        draw.text(xy=(X_Pos, Y_Pos), text="SSID:", fill=self.COLOUR_FILL, font=font, anchor="la")
+        draw.text(xy=(X_Pos+40, Y_Pos+20), text=SSID, fill=self.COLOUR_OUTLINE, font=font, anchor="la")
+        touchActiveRegions += (((X_Pos, Y_Pos, self.WIDTH, Y_Pos+45), "SSID"),)
+    
+        Y_Pos += 45
+        draw.text(xy=(X_Pos, Y_Pos), text="Password:", fill=self.COLOUR_FILL, font=font, anchor="la")
+        draw.text(xy=(X_Pos+40, Y_Pos+20), text=password, fill=self.COLOUR_OUTLINE, font=font, anchor="la")
+        touchActiveRegions += (((X_Pos, Y_Pos, self.WIDTH, Y_Pos+45), "Password"),)
+        
+        Y_Pos += 45
+        draw.text(xy=(X_Pos, Y_Pos), text="Status:", fill=self.COLOUR_FILL, font=font, anchor="la")
+        draw.text(xy=(X_Pos+40, Y_Pos+20), text=status, fill=self.COLOUR_OUTLINE, font=font, anchor="la")
+        
+        Y_Pos += 50
+        text = "Connect"
+        buttons_width = font.getlength(text)+12
+        
+        button_xy = (int((box_setting_x + self.WIDTH-self.MARGIN_SMALL)/2-buttons_width/2), Y_Pos,
+                    int((box_setting_x + self.WIDTH-self.MARGIN_SMALL)/2+buttons_width/2), Y_Pos+18)
+        
+        draw.rounded_rectangle(xy=button_xy, radius=3, fill=self.COLOUR_BUTTON)
+        draw.text(xy=self.calculate_centre_xy(button_xy), text=text, font=font, anchor="mm", fill=self.COLOUR_FILL)
+        touchActiveRegions += ((button_xy, text),)
+        
+        self.display.display()
+        #self.im.show()
+        return touchActiveRegions
+    
+
     def drawMessageBox(self, message:str, options: tuple) -> tuple:
         
         self.display.buffer = self.display.buffer.convert("L")
