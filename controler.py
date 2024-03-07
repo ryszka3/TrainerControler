@@ -2,14 +2,21 @@ import logging
 logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 
-import asyncio, configparser, queue, os, csv
+import asyncio
+import configparser
+import queue
+import os
+import csv
+import io
+import fcntl
 import time
 import shutil
 from   workouts    import WorkoutManager
-from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
+from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
 from   screen      import ScreenManager, TouchScreen
 from   mqtt        import MQTT_Exporter
+
 
 
 userList               = UserList()
@@ -89,6 +96,14 @@ class Supervisor:
         self.activeUserID = 0
         self.sleepDuration = 0.02
         self.USBPATH = "/media/usb"
+        
+        MCP3021_I2CADDR = 0x4f
+        I2C_SLAVE_COMMAND = 0x0703  #### Tells the OS this is an I2C Slave device
+
+        self.I2C_File =  io.open("/dev/i2c-0", "rb", buffering=0)
+
+        # set device address
+        fcntl.ioctl(self.I2C_File, I2C_SLAVE_COMMAND, MCP3021_I2CADDR)
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -150,10 +165,12 @@ class Supervisor:
         
         await self.touchTester(processTouch)
     
-    def read_battery_SOC() -> int:
+    def read_battery_SOC(self) -> int:
 
         # Read ADC (0-1023
-        adc_reading = 800
+        values = list(self.I2C_File.read(2))
+        adc_reading = ((values[0] << 8) + values[1]) >> 2
+        
         V_DD = 3.3
         voltage_2 = adc_reading * V_DD / 1023
 
@@ -164,7 +181,7 @@ class Supervisor:
         
         soc = 134.15407 * voltage_battery - 456.73415
 
-        return min(int(soc), 100)
+        return max(0, min(int(soc), 100))
     
     async def stringEdit(self, string:str) -> str:
         print("state: stringEditor method")     
