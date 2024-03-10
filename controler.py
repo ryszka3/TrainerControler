@@ -170,16 +170,10 @@ class Supervisor:
         # Read ADC (0-1023
         values = list(self.I2C_File.read(2))
         adc_reading = ((values[0] << 8) + values[1]) >> 2
+        A = 1.2
+        B = 540
         
-        V_DD = 3.3
-        voltage_2 = adc_reading * V_DD / 1023
-
-        RESISTOR_1 = 47
-        RESISTOR_2 = 100
-
-        voltage_battery = voltage_2 * (RESISTOR_1 + RESISTOR_2) / RESISTOR_2
-        
-        soc = 134.15407 * voltage_battery - 456.73415
+        soc = (adc_reading - B) / A
 
         return max(0, min(int(soc), 100))
     
