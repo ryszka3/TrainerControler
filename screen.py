@@ -1346,8 +1346,8 @@ class ScreenManager:
         return ((xy[2] + xy[0])/2, (xy[3] + xy[1])/2)
 
 
-    def drawPageWorkout(self, workoutType:str, workoutState: str, 
-                        workoutParams: WorkoutParameters, multiplier: int, selectedSegment:int = None) -> tuple:
+    def drawPageWorkout(self, workoutType:str, workoutState: str, workoutParams: WorkoutParameters,
+                        multiplier: int, selectedSegment:int = None, state_of_charge:int = None) -> tuple:
 
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
@@ -1355,7 +1355,6 @@ class ScreenManager:
         #draw = ImageDraw.Draw(self.im)
         touchActiveRegions = tuple()
 
-        X_POS_END: int = 180
         LINE_THICKNESS: int = 2
         Y_POS_SECTIONS = int(self.HEIGHT / 4)    # Sections begin at 1/4 height, i.e. 240 / 4 = 60
 
@@ -1553,12 +1552,24 @@ class ScreenManager:
                 segment_completed_ratio = self.dataContainer.currentSegment.elapsedTime / self.dataContainer.currentSegment.duration
             except:
                 segment_completed_ratio = None
-
-            segments_chart, touchBoxes = self.drawSegmentsChart(chart_w, chart_h, workoutParams, self.COLOUR_BG_LIGHT, self.COLOUR_TEXT_LIGHT,
+            image_segments_chart: Image.Image
+            image_segments_chart, touchBoxes = self.drawSegmentsChart(chart_w, chart_h, workoutParams, self.COLOUR_BG_LIGHT, self.COLOUR_TEXT_LIGHT,
                                                                 self.COLOUR_OUTLINE, selectedSegment, segment_completed_ratio)
-                                                    
-            self.display.buffer.paste(segments_chart, (204 + 2 * self.MARGIN_SMALL, self.HEIGHT - self.MARGIN_SMALL - chart_h ))
 
+            if state_of_charge is not None and state_of_charge < 25:
+                image_segments_chart = image_segments_chart.convert("L")
+                image_segments_chart = image_segments_chart.convert("RGB")
+              
+            segments_xy = (204 + 2 * self.MARGIN_SMALL, self.HEIGHT - self.MARGIN_SMALL - chart_h )
+            self.display.buffer.paste(image_segments_chart, segments_xy)
+            
+            if state_of_charge is not None and state_of_charge < 25:
+                image_battery = self.draw_battery(26, state_of_charge, self.COLOUR_BG_LIGHT)
+                battery_xy = (int(segments_xy[0] + chart_w / 2 - image_battery.width / 2), 
+                              int(segments_xy[1] + chart_h / 2 - image_battery.height / 2))
+                self.display.buffer.paste(image_battery, battery_xy)
+            
+            
         elif workoutType == "Freeride":
             pass
 
@@ -1793,7 +1804,7 @@ class ScreenManager:
 
 
     #def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, colour_climber: tuple) -> tuple:
-    def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple) -> tuple:
+    def drawPageMainMenu(self, colour_heart: tuple, colour_trainer: tuple, state_of_charge:int = None) -> tuple:
         
         self.display.clear(self.COLOUR_BG)
         draw = self.display.draw() # Get a PIL Draw object
@@ -1809,18 +1820,23 @@ class ScreenManager:
         
         HEART_HEIGHT = 23
         TRAINER_HEIGHT = 27
-        heartImage: Image   = self.drawHeart(HEART_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
-        trainerImage: Image = self.drawTrainer(TRAINER_HEIGHT, colour_trainer, self.COLOUR_OUTLINE, self.COLOUR_BG)
-        #climberImage: Image = self.drawClimber(DEVICES_HEIGHT, colour_climber, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        image_heart   = self.drawHeart(HEART_HEIGHT, colour_heart, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        image_trainer = self.drawTrainer(TRAINER_HEIGHT, colour_trainer, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        #image_climber = self.drawClimber(DEVICES_HEIGHT, colour_climber, self.COLOUR_OUTLINE, self.COLOUR_BG)
+        image_battery = self.draw_battery(26, state_of_charge, self.COLOUR_BG)
         
+
         Y_Pos = self.MARGIN_LARGE
-        X_Pos = int(self.MARGIN_LARGE*1.5 + box_width -heartImage.width/2)
+        X_Pos = self.WIDTH - self.MARGIN_LARGE - image_battery.width
+        self.display.buffer.paste(image_battery, (X_Pos, Y_Pos))
+
+        X_Pos = int(self.MARGIN_LARGE*1.5 + box_width -image_heart.width/2)
 
         #self.display.buffer
-        self.display.buffer.paste(heartImage, (int(X_Pos), int(Y_Pos)))
+        self.display.buffer.paste(image_heart, (X_Pos, Y_Pos))
        
-        X_Pos = int(self.WIDTH/2 - trainerImage.width/2) 
-        self.display.buffer.paste(trainerImage, (int(X_Pos), int(Y_Pos)))
+        X_Pos = int(self.WIDTH/2 - image_trainer.width/2)
+        self.display.buffer.paste(image_trainer, (X_Pos, Y_Pos))
 
         #X_Pos = int(self.MARGIN_LARGE*2.5 + 2*box_width -climberImage.width/2)
         #self.im.paste(climberImage, (X_Pos, Y_Pos))
@@ -1871,7 +1887,7 @@ class ScreenManager:
         self.display.buffer.paste(image, (int(self.WIDTH/2-WIDTH/2), int(self.HEIGHT - HEIGHT - 40)))
         self.display.display()
 
-    def drawTrainer(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
+    def drawTrainer(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image.Image:
         
         WH_RATIO = 1
         width = int(height * WH_RATIO / 2) * 2 + 1
@@ -1901,7 +1917,7 @@ class ScreenManager:
 
         return image
 
-    def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image:
+    def drawHeart(self, height: int, colour_fill: tuple, colour_outline: tuple, colour_bg: tuple) -> Image.Image:
 
         if height % 2 == 1:
             height = int(height/2)*2 + 1 ## make sure height is odd
@@ -1969,6 +1985,33 @@ class ScreenManager:
             X_pos -= 1
 
         return image
+    
+    def draw_battery(self, height: int, state_of_charge:int, background_colour: tuple) -> Image.Image:
+        fill_colour = self.COLOUR_CLIMBER if state_of_charge > 50 else self.COLOUR_OUTLINE
+        fill_colour = self.COLOUR_HEART if state_of_charge < 25 else fill_colour
+        
+        ratio = 2   ## width/height
+        width = ratio * height
+        outline_width = max(int(height/8),3)
+        body_width = int(width*12/13)
+        pin_half_height = int(height/3/2)
+        battery = Image.new("RGB", (width,height), background_colour)
+        draw = ImageDraw.Draw(battery)
+        draw.rounded_rectangle(xy=(0,0,body_width, height-1), outline=self.COLOUR_BUTTON, radius=outline_width*2, width=outline_width)
+        draw.rounded_rectangle(xy=(body_width-outline_width+1, int(height/2)-pin_half_height-1, width-1, int(height/2)+pin_half_height),
+                            outline=self.COLOUR_BUTTON, radius=1, width=max(int(outline_width-2),2))
+        gap = max(int(height / 16),1)
+        if state_of_charge is not None and state_of_charge > 0:
+            fill_x_start = outline_width+gap
+            fill_x_end = body_width - outline_width - gap
+            fill_length = int((fill_x_end - fill_x_start) * state_of_charge / 100)
+            fill_x_end = fill_x_start + fill_length
+
+            draw.rounded_rectangle(xy=(fill_x_start, outline_width+gap, fill_x_end, height-outline_width-gap-1), 
+                                fill=fill_colour,radius=outline_width )
+        
+        
+        return battery
 
 if __name__ == "__main__":
 

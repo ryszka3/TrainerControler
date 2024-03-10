@@ -2,14 +2,21 @@ import logging
 logging.basicConfig(filename='app.log', filemode='a', level=logging.DEBUG)
 
 
-import asyncio, configparser, queue, os, csv
+import asyncio
+import configparser
+import queue
+import os
+import csv
+import io
+import fcntl
 import time
 import shutil
 from   workouts    import WorkoutManager
-from   BLE_Device  import HeartRateMonitor, FitnessMachine, BLE_Device
+from   BLE_Device  import HeartRateMonitor, FitnessMachine
 from   datatypes   import DataContainer, UserList, QueueEntry, WorkoutSegment, CSV_headers
 from   screen      import ScreenManager, TouchScreen
 from   mqtt        import MQTT_Exporter
+
 
 
 userList               = UserList()
@@ -92,6 +99,14 @@ class Supervisor:
         self.wifi_ssid: str = None
         self.wifi_password: str = None
         self.wifi_status = "Unknown"
+        
+        MCP3021_I2CADDR = 0x4f
+        I2C_SLAVE_COMMAND = 0x0703  #### Tells the OS this is an I2C Slave device
+
+        self.I2C_File =  io.open("/dev/i2c-0", "rb", buffering=0)
+
+        # set device address
+        fcntl.ioctl(self.I2C_File, I2C_SLAVE_COMMAND, MCP3021_I2CADDR)
 
 
     def isInsideBoundaryBox(self, touchPoint: tuple, boundaryBox: tuple):
@@ -152,7 +167,7 @@ class Supervisor:
                                                           nextEnabled=showNextPageButton, newProgramEnabled=showNewProgramButton)
         
         await self.touchTester(processTouch)
-
+    
     async def scan_wlan(self) -> list:
         result = os.popen("sudo iwlist wlan0 scan | grep 'ESSID'")
         result = list(result)
@@ -165,6 +180,23 @@ class Supervisor:
             ssid_list = [item.removesuffix("\"\n") for item in ssid_list]
             return ssid_list
 
+    def read_battery_SOC(self) -> int:
+
+        # Read ADC (0-1023
+        adc_reading = 0
+        for i in range(5):
+            values = list(self.I2C_File.read(2))
+            adc_reading += ((values[0] << 8) + values[1]) >> 2
+        
+        adc_reading /= 5
+        
+        A = 1.2
+        B = 540
+        
+        soc = (adc_reading - B) / A
+
+        return max(0, min(int(soc), 100))
+    
     async def stringEdit(self, string:str) -> str:
         print("state: stringEditor method")     
         
@@ -308,10 +340,12 @@ class Supervisor:
     async def state_main_menu(self):
         
         print("state: main menu method")
-        self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT)
+        soc = self.read_battery_SOC()
+        self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT, soc)
         
         timer_heart   = time.time()
         timer_trainer = time.time()
+        timer_soc     = time.time()
 
         heart_fill_colour = lcd.COLOUR_BG_LIGHT
         trainer_fill_colour = lcd.COLOUR_BG_LIGHT
@@ -340,6 +374,10 @@ class Supervisor:
             else:
                 trainer_fill_colour = lcd.COLOUR_TT
 
+            if time.time() - timer_soc > 15:
+                soc = self.read_battery_SOC()
+                timer_soc = time.time()
+
             async def processTouch(value: str) -> bool:
                 self.state = value
                 return True
@@ -352,7 +390,7 @@ class Supervisor:
                 self.state = "MainMenu"
                 await asyncio.sleep(4.0)
                         
-            lcd.drawPageMainMenu(heart_fill_colour, trainer_fill_colour)
+            lcd.drawPageMainMenu(heart_fill_colour, trainer_fill_colour, soc)
 
             await asyncio.sleep(self.sleepDuration)
     
@@ -491,14 +529,19 @@ class Supervisor:
             return False
 
         print("Program execution loop, workout manager state: ", workoutManager.state)
-
+        t0 = time.time()
+        soc: int = self.read_battery_SOC()
         while workoutManager.state != "END":
             self.touchActiveRegions = lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
-                                workoutManager.multiplier, workoutManager.current_segment_id)
+                                workoutManager.multiplier, workoutManager.current_segment_id, soc)
             await self.touchTester(processTouch, 0.25)
+            if time.time() - t0 > 15:
+                soc = self.read_battery_SOC()
+                t0 = time.time()
             await asyncio.sleep(self.sleepDuration)
+        
         SAVE_DELAY = 15
-        t0 = time.time()    
+        t0 = time.time()
         elapsedTime = 0
 
         while True:
