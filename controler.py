@@ -168,8 +168,13 @@ class Supervisor:
     def read_battery_SOC(self) -> int:
 
         # Read ADC (0-1023
-        values = list(self.I2C_File.read(2))
-        adc_reading = ((values[0] << 8) + values[1]) >> 2
+        adc_reading = 0
+        for i in range(5):
+            values = list(self.I2C_File.read(2))
+            adc_reading += ((values[0] << 8) + values[1]) >> 2
+        
+        adc_reading /= 5
+        
         A = 1.2
         B = 540
         
@@ -320,7 +325,7 @@ class Supervisor:
     async def state_main_menu(self):
         
         print("state: main menu method")
-        soc = None
+        soc = self.read_battery_SOC()
         self.touchActiveRegions = lcd.drawPageMainMenu(lcd.COLOUR_HEART, lcd.COLOUR_TT, soc)
         
         timer_heart   = time.time()
@@ -510,7 +515,7 @@ class Supervisor:
 
         print("Program execution loop, workout manager state: ", workoutManager.state)
         t0 = time.time()
-        soc: int = None
+        soc: int = self.read_battery_SOC()
         while workoutManager.state != "END":
             self.touchActiveRegions = lcd.drawPageWorkout("Program", workoutManager.state, workoutManager.workouts.getWorkout(self.selected_program).getParameters(),
                                 workoutManager.multiplier, workoutManager.current_segment_id, soc)
